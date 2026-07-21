@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger — Daily Timesheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f4efe4;
+  --paper-2:#ece4d2;
+  --card:#fffcf4;
+  --ink:#26251f;
+  --ink-soft:#77715f;
+  --line:#ddd3bc;
+  --line-strong:#c9bd9f;
+  --green:#1e6b45;
+  --red:#a2333c;
+  --blue:#2f5d8a;
+  --amber:#8a6a1f;
+  --radius:14px;
+  --shadow:0 24px 60px -30px rgba(76,60,22,.35), 0 2px 6px -2px rgba(76,60,22,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:"Spline Sans Mono",ui-monospace,monospace;
+  background:
+    radial-gradient(900px 500px at 85% -5%, rgba(255,252,240,.9) 0%, transparent 60%),
+    radial-gradient(700px 500px at -10% 110%, rgba(30,107,69,.07) 0%, transparent 60%),
+    var(--paper);
+  color:var(--ink);
+  font-size:14px;line-height:1.5;
+}
+body::after{ /* grain */
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.40 0 0 0 0 0.30 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+h1,h2,h3,.serif{font-family:"Fraunces",Georgia,serif}
+button{font:inherit;cursor:pointer;color:inherit}
+input,select{font:inherit;color:var(--ink)}
+input:focus,select:focus{outline:2px solid var(--green);outline-offset:-1px}
+
+/* ---------- buttons ---------- */
+.btn{
+  border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);
+  padding:10px 18px;border-radius:10px;font-weight:600;letter-spacing:.01em;
+  transition:transform .08s ease, box-shadow .15s, background .15s;
+  box-shadow:0 3px 0 rgba(38,37,31,.25);
+}
+.btn:hover{background:#0f0e0b}
+.btn:active{transform:translateY(2px);box-shadow:none}
+.btn.full{width:100%;margin-top:8px}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line-strong);box-shadow:0 3px 0 rgba(76,60,22,.12)}
+.btn.ghost:hover{background:var(--paper-2)}
+.btn.green{background:var(--green);border-color:var(--green)}
+.btn.green:hover{background:#175538}
+.btn.small{padding:5px 12px;font-size:12px;border-radius:8px;box-shadow:none}
+
+/* ---------- login ---------- */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{
+  width:min(410px,100%);background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius);padding:40px 34px 30px;box-shadow:var(--shadow);
+  position:relative;overflow:hidden;
+}
+.login-card::before{content:"";position:absolute;inset:0 0 auto 0;height:7px;
+  background:repeating-linear-gradient(90deg,var(--green) 0 40px,#caa53d 40px 80px,var(--red) 80px 120px,#3f3f3f 120px 160px,var(--blue) 160px 200px)}
+.login-card h1{font-size:40px;font-weight:900;letter-spacing:-.03em}
+.login-card p.sub{color:var(--ink-soft);margin:6px 0 26px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-soft);margin-bottom:6px;font-weight:500}
+.field input,.field select{
+  width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--paper);
+}
+.login-msg{color:var(--red);font-size:12px;min-height:18px;margin-top:8px}
+.login-hint{font-size:11px;color:var(--ink-soft);margin-top:16px;border-top:1px dashed var(--line-strong);padding-top:12px;line-height:1.6}
+
+/* ---------- app shell ---------- */
+.app{max-width:1100px;margin:0 auto;padding:34px 22px 90px;display:none}
+header.top{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap}
+header.top .mast h1{font-size:52px;font-weight:900;letter-spacing:-.035em;line-height:1}
+header.top .mast .who{color:var(--ink-soft);margin-top:4px;display:block}
+header.top .spacer{flex:1}
+.statgrid{display:flex;gap:12px}
+.stat{
+  background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 18px;text-align:right;min-width:110px;
+}
+.stat .v{font-family:"Fraunces",serif;font-size:24px;font-weight:600;line-height:1.1}
+.stat .l{font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-soft)}
+.daytabs{display:flex;gap:8px;margin:26px 0 14px}
+.daytab{
+  border:1.5px solid var(--line-strong);background:var(--card);border-radius:999px;padding:8px 18px;
+  color:var(--ink-soft);font-size:13px;transition:.15s;
+}
+.daytab:hover{border-color:var(--ink)}
+.daytab.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.daytab .d{font-weight:600}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:visible}
+
+/* ---------- add form ---------- */
+.addbar{display:grid;grid-template-columns:150px 1fr 1.5fr 150px auto;gap:12px;padding:18px 16px;align-items:end;border-bottom:2px solid var(--ink)}
+.addbar .field{margin:0}
+.addbar input,.addbar select{width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:9px;background:var(--paper)}
+@media(max-width:860px){.addbar{grid-template-columns:1fr 1fr}}
+
+/* ---------- brand dropdown ---------- */
+.branddd{position:relative}
+.branddd-btn{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:8px 11px;border:1.5px solid var(--line);border-radius:9px;background:var(--paper);text-align:left;
+}
+.branddd-btn:focus{outline:2px solid var(--green);outline-offset:-1px}
+.branddd-btn .caret{font-size:10px;color:var(--ink-soft)}
+.branddd-menu{
+  position:absolute;top:calc(100% + 6px);left:0;min-width:100%;z-index:30;
+  background:var(--card);border:1.5px solid var(--line-strong);border-radius:12px;padding:6px;
+  box-shadow:0 18px 40px -18px rgba(76,60,22,.45);display:none;
+}
+.branddd.open .branddd-menu{display:block;animation:drop .14s ease}
+@keyframes drop{from{opacity:0;transform:translateY(-4px)}to{opacity:1}}
+.branddd-item{
+  display:flex;width:100%;align-items:center;gap:8px;padding:7px 9px;border:none;background:none;border-radius:8px;
+}
+.branddd-item:hover{background:var(--paper-2)}
+.bpill{
+  display:inline-block;padding:2.5px 11px;border-radius:999px;font-size:11.5px;font-weight:600;letter-spacing:.02em;
+  border:1px solid transparent;
+}
+.b-KN{background:#f6e3b4;color:#7a5410}
+.b-ZW{background:#3d3d3d;color:#fff}
+.b-RW{background:#1e6b45;color:#fff}
+.b-AUJ{background:#a2333c;color:#fff}
+.b-SV{background:#2f5d8a;color:#fff}
+.b-none{background:var(--paper-2);color:var(--ink-soft);border-color:var(--line-strong)}
+
+/* ---------- task table ---------- */
+table.sheet{width:100%;border-collapse:collapse;font-size:13px}
+.sheet th{
+  text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--ink-soft);
+  padding:11px 14px;border-bottom:1.5px solid var(--line-strong);background:var(--paper-2);font-weight:600;
+}
+.sheet td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.sheet tbody tr:hover td{background:rgba(30,107,69,.035)}
+.sheet .num{font-variant-numeric:tabular-nums;text-align:right;font-size:14px}
+.status-sel{border:none;border-radius:999px;padding:4.5px 11px;font-size:12px;font-weight:600;cursor:pointer}
+.st-done{background:#ddecdf;color:var(--green)}
+.st-progress{background:#dbe7f2;color:var(--blue)}
+.st-paused{background:#f3dcd8;color:var(--red)}
+.st-preview{background:#f2e8cc;color:var(--amber)}
+.sess{color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12px;line-height:1.7}
+.rowbtns{display:flex;gap:6px;justify-content:flex-end}
+.icon-btn{border:1.5px solid var(--line);background:transparent;border-radius:7px;padding:3px 9px;font-size:12px;color:var(--ink-soft);transition:.12s}
+.icon-btn:hover{background:var(--paper-2);color:var(--ink);border-color:var(--line-strong)}
+.icon-btn.rec{border-color:var(--red);color:var(--red);font-weight:600}
+.icon-btn.rec.live{background:var(--red);color:#fff;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.65}}
+.empty{padding:56px 40px;text-align:center;color:var(--ink-soft)}
+.empty .serif{font-size:26px;margin-bottom:6px;color:var(--ink)}
+
+/* ---------- footer bar ---------- */
+.foot{display:flex;align-items:center;gap:14px;padding:16px;border-top:2px solid var(--ink);flex-wrap:wrap}
+.foot .total{font-family:"Fraunces",serif;font-size:22px;font-weight:600}
+.foot .spacer{flex:1}
+.toast{
+  position:fixed;bottom:26px;left:50%;transform:translate(-50%,20px);opacity:0;
+  background:var(--ink);color:var(--paper);padding:11px 22px;border-radius:999px;font-size:13px;
+  transition:.25s;pointer-events:none;z-index:50;box-shadow:0 10px 30px -8px rgba(0,0,0,.4);
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.note{font-size:11.5px;color:var(--ink-soft);margin-top:16px;line-height:1.7}
+kbd{background:var(--paper-2);border:1px solid var(--line-strong);border-radius:4px;padding:1px 5px;font-size:11px}
+</style>
+</head>
+<body>
+
+<div class="login-wrap" id="loginView">
+  <form class="login-card" id="loginForm">
+    <h1>Ledger</h1>
+    <p class="sub">Daily timesheet · paste-ready for Sheets</p>
+    <div class="field"><label>Name</label><input id="loginName" autocomplete="username" placeholder="Dilpreet" required></div>
+    <div class="field"><label>PIN</label><input id="loginPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••" required></div>
+    <button class="btn full green" type="submit">Sign in</button>
+    <div class="login-msg" id="loginMsg"></div>
+    <div class="login-hint">First sign-in creates your account on this device. Data lives in this browser only — today and the previous working day are kept, older days are cleared.</div>
+  </form>
+</div>
+
+<div class="app" id="appView">
+  <header class="top">
+    <div class="mast">
+      <h1 id="hdrName">Ledger</h1>
+      <span class="who" id="hdrDate"></span>
+    </div>
+    <span class="spacer"></span>
+    <div class="statgrid">
+      <div class="stat"><div class="v" id="statHours">0.00</div><div class="l">hours</div></div>
+      <div class="stat"><div class="v" id="statTasks">0</div><div class="l">tasks</div></div>
+    </div>
+    <button class="btn ghost small" id="logoutBtn">Sign out</button>
+  </header>
+
+  <div class="daytabs" id="dayTabs"></div>
+
+  <div class="panel">
+    <div class="addbar" id="addBar">
+      <div class="field"><label>Brand</label>
+        <div class="branddd" id="brandDD">
+          <button type="button" class="branddd-btn" id="brandBtn" aria-haspopup="listbox">
+            <span id="brandCur"><span class="bpill b-none">Default Task</span></span>
+            <span class="caret">▼</span>
+          </button>
+          <div class="branddd-menu" id="brandMenu" role="listbox"></div>
+        </div>
+      </div>
+      <div class="field"><label>Project</label><input id="fProject" list="projectList" placeholder="Review Section"><datalist id="projectList"></datalist></div>
+      <div class="field"><label>Task</label><input id="fTask" placeholder="Settings edited, issue resolution…"></div>
+      <div class="field"><label>Status</label>
+        <select id="fStatus">
+          <option>Done</option><option>In Progress</option><option>Paused</option><option>Preview Sent</option>
+        </select>
+      </div>
+      <button class="btn green" id="addBtn" type="button">+ Add task</button>
+    </div>
+
+    <table class="sheet">
+      <thead><tr>
+        <th style="width:110px">Brand</th><th>Project</th><th>Task</th>
+        <th style="width:180px">Sessions</th><th style="width:80px;text-align:right">Hours</th>
+        <th style="width:125px">Status</th><th style="width:155px"></th>
+      </tr></thead>
+      <tbody id="taskBody"></tbody>
+    </table>
+
+    <div class="foot">
+      <span class="total" id="dayTotal">0.00 h</span>
+      <span class="spacer"></span>
+      <button class="btn ghost" id="copyBtn">Copy for Sheets</button>
+    </div>
+  </div>
+
+  <p class="note">
+    ▶ starts a timer on a task, ⏹ stops it and logs the session. <kbd>+ session</kbd> adds a manual time range.
+    “Copy for Sheets” copies tab-separated rows (Brand → Project → Task → Start → End → Hours → Status) that paste straight into the sheet, one row per session, matching your current format.
+  </p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const LS_USERS = "ledger.users";
+const STATUSES = {"Done":"st-done","In Progress":"st-progress","Paused":"st-paused","Preview Sent":"st-preview"};
+const BRANDS = [
+  {v:"",    label:"Default Task", cls:"b-none"},
+  {v:"KN",  label:"KN",  cls:"b-KN"},
+  {v:"ZW",  label:"ZW",  cls:"b-ZW"},
+  {v:"RW",  label:"RW",  cls:"b-RW"},
+  {v:"AUJ", label:"AUJ", cls:"b-AUJ"},
+  {v:"SV",  label:"SV",  cls:"b-SV"},
+];
+const brandCls = v => (BRANDS.find(b=>b.v===v)||BRANDS[0]).cls;
+
+/* ---------- helpers ---------- */
+const todayKey = () => new Date().toISOString().slice(0,10);
+function prevWorkingDay(key){
+  const d = new Date(key + "T12:00:00");
+  do { d.setDate(d.getDate()-1); } while (d.getDay()===0 || d.getDay()===6);
+  return d.toISOString().slice(0,10);
+}
+const fmtDate = key => new Date(key+"T12:00:00").toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
+const hhmmss = d => d.toTimeString().slice(0,8);
+function toSec(t){ if(!t) return null; const p=t.split(":").map(Number); return p[0]*3600+(p[1]||0)*60+(p[2]||0); }
+function hours(start,end){
+  let s=toSec(start), e=toSec(end);
+  if(s==null||e==null) return 0;
+  if(e<s) e+=86400;
+  return (e-s)/3600;
+}
+const fmtH = h => (Math.round(h*100)/100).toFixed(2);
+async function hash(str){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2200); }
+
+/* ---------- storage ---------- */
+let user=null, store=null, viewDay=null, curBrand="";
+const dataKey = () => "ledger.data." + user;
+function load(){
+  store = JSON.parse(localStorage.getItem(dataKey()) || "{}");
+  if(!store.days) store.days = {};
+  const keep = new Set([todayKey(), prevWorkingDay(todayKey())]);
+  for(const k of Object.keys(store.days)) if(!keep.has(k)) delete store.days[k];
+  if(!store.days[todayKey()]) store.days[todayKey()] = [];
+  save();
+}
+const save = () => localStorage.setItem(dataKey(), JSON.stringify(store));
+const tasks = () => store.days[viewDay] || (store.days[viewDay]=[]);
+
+/* ---------- auth ---------- */
+$("loginForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const name = $("loginName").value.trim();
+  const pin  = $("loginPin").value;
+  if(!name||!pin) return;
+  const users = JSON.parse(localStorage.getItem(LS_USERS)||"{}");
+  const h = await hash(name.toLowerCase()+"::"+pin);
+  if(users[name.toLowerCase()]){
+    if(users[name.toLowerCase()] !== h){ $("loginMsg").textContent="Wrong PIN for this name."; return; }
+  } else {
+    users[name.toLowerCase()] = h;
+    localStorage.setItem(LS_USERS, JSON.stringify(users));
+    toast("Account created on this device");
+  }
+  sessionStorage.setItem("ledger.session", name);
+  enter(name);
+});
+$("logoutBtn").onclick = ()=>{ sessionStorage.removeItem("ledger.session"); location.reload(); };
+
+function enter(name){
+  user = name.toLowerCase();
+  $("loginView").style.display="none";
+  $("appView").style.display="block";
+  $("hdrName").textContent = name.charAt(0).toUpperCase()+name.slice(1);
+  load();
+  viewDay = todayKey();
+  buildBrandMenu();
+  render();
+  setInterval(tick, 1000);
+}
+
+/* ---------- brand dropdown ---------- */
+function buildBrandMenu(){
+  $("brandMenu").innerHTML = BRANDS.map(b=>
+    `<button type="button" class="branddd-item" data-b="${b.v}" role="option"><span class="bpill ${b.cls}">${b.label}</span></button>`).join("");
+  $("brandMenu").querySelectorAll(".branddd-item").forEach(el=>el.onclick=()=>{
+    curBrand = el.dataset.b;
+    const b = BRANDS.find(x=>x.v===curBrand)||BRANDS[0];
+    $("brandCur").innerHTML = `<span class="bpill ${b.cls}">${b.label}</span>`;
+    $("brandDD").classList.remove("open");
+  });
+}
+$("brandBtn").onclick = e=>{ e.stopPropagation(); $("brandDD").classList.toggle("open"); };
+document.addEventListener("click", e=>{ if(!$("brandDD").contains(e.target)) $("brandDD").classList.remove("open"); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") $("brandDD").classList.remove("open"); });
+
+/* ---------- rendering ---------- */
+function render(){
+  $("hdrDate").textContent = fmtDate(viewDay) + (viewDay===todayKey() ? " · today" : "");
+  renderTabs(); renderTable(); renderDatalists();
+  $("addBar").style.opacity = viewDay===todayKey() ? 1 : .45;
+}
+function renderTabs(){
+  const prev = prevWorkingDay(todayKey());
+  const tabs = [[todayKey(),"Today"],[prev,"Prev working day"]];
+  $("dayTabs").innerHTML = tabs.map(([k,label])=>
+    `<button class="daytab ${k===viewDay?"active":""}" data-day="${k}"><span class="d">${label}</span> · ${fmtDate(k)}</button>`).join("");
+  [...$("dayTabs").children].forEach(b=>b.onclick=()=>{viewDay=b.dataset.day;render();});
+}
+function renderDatalists(){
+  const all = Object.values(store.days).flat();
+  $("projectList").innerHTML = [...new Set(all.map(t=>t.project).filter(Boolean))].map(v=>`<option value="${v}">`).join("");
+}
+function taskHours(t){
+  let h = t.sessions.reduce((a,s)=>a+hours(s.start,s.end),0);
+  if(t.live) h += hours(t.live, hhmmss(new Date()));
+  if(!t.sessions.length && !t.live && t.manualHours) h = t.manualHours;
+  return h;
+}
+function renderTable(){
+  const list = tasks();
+  const body = $("taskBody");
+  if(!list.length){
+    body.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="serif">Nothing logged ${viewDay===todayKey()?"yet today":"this day"}</div>Add a task above${viewDay===todayKey()?" or hit ▶ to start timing":""}.</div></td></tr>`;
+  } else {
+    body.innerHTML = list.map((t,i)=>{
+      const sess = t.sessions.map(s=>`<div class="sess">${s.start} – ${s.end} <span style="opacity:.6">(${fmtH(hours(s.start,s.end))})</span></div>`).join("")
+        + (t.live?`<div class="sess" style="color:var(--red)">${t.live} – now…</div>`:"");
+      const editable = viewDay===todayKey();
+      return `<tr data-i="${i}">
+        <td><span class="bpill ${brandCls(t.brand)}">${t.brand?esc(t.brand):"Default Task"}</span></td>
+        <td>${esc(t.project)}</td>
+        <td>${esc(t.task)}</td>
+        <td>${sess||`<span style="color:var(--ink-soft)">—</span>`}</td>
+        <td class="num" data-hours="${i}"><strong>${fmtH(taskHours(t))}</strong></td>
+        <td><select class="status-sel ${STATUSES[t.status]||""}" data-st="${i}" ${editable?"":"disabled"}>
+          ${Object.keys(STATUSES).map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}
+        </select></td>
+        <td><div class="rowbtns">
+          ${editable ? (t.live
+            ? `<button class="icon-btn rec live" data-stop="${i}">⏹ stop</button>`
+            : `<button class="icon-btn rec" data-go="${i}">▶</button>`)
+          : ""}
+          ${editable?`<button class="icon-btn" data-sess="${i}">+ session</button>
+          <button class="icon-btn" data-del="${i}">✕</button>`:""}
+        </div></td>
+      </tr>`;
+    }).join("");
+  }
+  const total = list.reduce((a,t)=>a+taskHours(t),0);
+  $("dayTotal").textContent = fmtH(total)+" h";
+  $("statHours").textContent = fmtH(total);
+  $("statTasks").textContent = list.length;
+
+  body.querySelectorAll("[data-st]").forEach(el=>el.onchange=()=>{ tasks()[+el.dataset.st].status=el.value; save(); renderTable(); });
+  body.querySelectorAll("[data-del]").forEach(el=>el.onclick=()=>{ if(confirm("Delete this task?")){ tasks().splice(+el.dataset.del,1); save(); renderTable(); }});
+  body.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>{ const t=tasks()[+el.dataset.go]; t.live=hhmmss(new Date()); save(); renderTable(); });
+  body.querySelectorAll("[data-stop]").forEach(el=>el.onclick=()=>{ const t=tasks()[+el.dataset.stop]; t.sessions.push({start:t.live,end:hhmmss(new Date())}); t.live=null; save(); renderTable(); });
+  body.querySelectorAll("[data-sess]").forEach(el=>el.onclick=()=>{
+    const t=tasks()[+el.dataset.sess];
+    const start=prompt("Start time (HH:MM or HH:MM:SS)"); if(!start) return;
+    const end=prompt("End time (HH:MM or HH:MM:SS)"); if(!end) return;
+    if(toSec(start)==null||toSec(end)==null||!/^\d{1,2}:\d{2}(:\d{2})?$/.test(start.trim())||!/^\d{1,2}:\d{2}(:\d{2})?$/.test(end.trim())){toast("Invalid time format");return;}
+    t.sessions.push({start:norm(start),end:norm(end)}); save(); renderTable();
+  });
+}
+const norm = t => { const p=t.trim().split(":"); return p.length===2?t.trim()+":00":t.trim(); };
+const esc = s => (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function tick(){
+  const list = tasks();
+  list.forEach((t,i)=>{
+    if(t.live){ const cell=document.querySelector(`[data-hours="${i}"] strong`); if(cell) cell.textContent=fmtH(taskHours(t)); }
+  });
+  if(list.some(t=>t.live)){
+    const total = fmtH(list.reduce((a,t)=>a+taskHours(t),0));
+    $("dayTotal").textContent = total+" h";
+    $("statHours").textContent = total;
+  }
+}
+
+/* ---------- add task ---------- */
+$("addBtn").onclick = ()=>{
+  if(viewDay!==todayKey()){ toast("Switch to Today to add tasks"); return; }
+  const task=$("fTask").value.trim();
+  if(!task){ $("fTask").focus(); return; }
+  tasks().push({brand:curBrand, project:$("fProject").value.trim(), task,
+    status:$("fStatus").value, sessions:[], live:null});
+  $("fTask").value=""; save(); render();
+};
+["fProject","fTask"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("addBtn").click();}}));
+
+/* ---------- copy for sheets ---------- */
+$("copyBtn").onclick = ()=>{
+  const list = tasks();
+  if(!list.length){ toast("Nothing to copy"); return; }
+  const rows=[];
+  for(const t of list){
+    const sess = t.sessions.length ? t.sessions : [{start:"",end:""}];
+    sess.forEach((s,i)=>{
+      const h = s.start&&s.end ? fmtH(hours(s.start,s.end)) : (i===0?fmtH(taskHours(t)):"");
+      rows.push([
+        i===0 ? t.brand : "", i===0 ? t.project : "", i===0 ? t.task : "",
+        s.start, s.end, h, i===0 ? t.status : ""
+      ].join("\t"));
+    });
+  }
+  const tsv = rows.join("\n");
+  navigator.clipboard.writeText(tsv).then(
+    ()=>toast(`Copied ${rows.length} row${rows.length>1?"s":""} — paste into the sheet`),
+    ()=>{
+      const ta=document.createElement("textarea"); ta.value=tsv; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy"); ta.remove(); toast("Copied");
+    });
+};
+
+/* ---------- boot ---------- */
+const sessName = sessionStorage.getItem("ledger.session");
+if(sessName) enter(sessName);
+</script>
+</body>
+</html>
