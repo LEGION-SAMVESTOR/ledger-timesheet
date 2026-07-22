@@ -10,15 +10,23 @@
 </head>
 <body>
 
+<div class="boot" id="boot">
+  <div class="boot-inner">
+    <div class="boot-logo">LEDGER<span class="tick">_</span></div>
+    <div class="boot-bar"><span></span></div>
+    <div class="boot-msg">INITIALIZING SYSTEMS</div>
+  </div>
+</div>
+
 <div class="login-wrap" id="loginView">
   <form class="login-card" id="loginForm">
+    <div class="lc-badge">SECURE · LOCAL</div>
     <h1>LEDGER<span class="tick">_</span></h1>
-    <p class="sub">DAILY OPS · PASTE-READY FOR SHEETS</p>
-    <div class="field"><label>Operator</label><input id="loginName" autocomplete="username" placeholder="Dilpreet" required></div>
-    <div class="field"><label>PIN</label><input id="loginPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••" required></div>
-    <button class="btn pri full" type="submit">Initialize session</button>
+    <p class="sub">DAILY OPS CONSOLE</p>
+    <div class="field"><label>Operator</label><input id="loginName" autocomplete="username" placeholder="Your name" required></div>
+    <div class="field"><label>PIN</label><input id="loginPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="****" required></div>
+    <button class="btn pri full" type="submit">Initialize session ▸</button>
     <div class="login-msg" id="loginMsg"></div>
-    <div class="login-hint">First sign-in creates your account on this device. Data lives in this browser only — today and the previous working day are kept, older days are cleared.</div>
   </form>
 </div>
 
@@ -61,14 +69,16 @@
       <button class="btn pri" id="addBtn" type="button">+ Add</button>
     </div>
 
+    <div class="tablewrap">
     <table class="sheet">
       <thead><tr>
         <th style="width:108px">Brand</th><th style="width:170px">Project</th><th>Task</th>
-        <th style="width:250px">Timeblocks</th><th style="width:78px;text-align:right">Hours</th>
+        <th style="width:250px">Timeblocks</th><th style="width:78px">Hours</th>
         <th style="width:130px">Status</th><th style="width:150px"></th>
       </tr></thead>
       <tbody id="taskBody"></tbody>
     </table>
+    </div>
 
     <div class="foot">
       <span class="total"><span id="dayTotal">0.00</span> <span class="u">HRS</span></span>

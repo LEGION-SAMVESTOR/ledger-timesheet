@@ -405,7 +405,7 @@ function renderTable(){
         <td><span class="bpill ${brandCls(t.brand)}">${t.brand?esc(t.brand):"Default Task"}</span></td>
         <td class="projcell">${esc(t.project)}</td>
         <td class="taskdesc">${esc(t.task)||'<span style="opacity:.4">—</span>'}</td>
-        <td class="tbcell">${t.live?`<span class="livehint">● REC</span>`:""}${sess||`<span style="color:var(--ink-soft);opacity:.5">—</span>`}</td>
+        <td class="tbcell">${t.live?`<span class="livehint">● REC</span>`:""}<div class="sesswrap">${sess||`<span style="color:var(--ink-soft);opacity:.5">—</span>`}</div></td>
         <td class="num ${noBlocks&&editable?"editable":""}" ${noBlocks&&editable?`data-eh="${i}" title="Click to set hours"`:""} data-hours="${i}"><strong>${fmtH(taskHours(t))}</strong></td>
         <td><select class="status-sel ${STATUSES[t.status]||""}" data-st="${i}" ${editable?"":"disabled"}>
           ${Object.keys(STATUSES).map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}
@@ -495,7 +495,8 @@ function buildRows(){
     const total = exportHours(t);
     if(total<=0) continue; // skip zero-hour entries
     const brandName = t.brand || "Default Task";
-    if(isDefaultEntry(t) || !t.sessions.length){
+    // every Default-Task entry exports as one final-value row — no start/end times
+    if(!t.brand || isDefaultEntry(t) || !t.sessions.length){
       // final value only — one row
       const desc = t.task || (t.sessions[0] && t.sessions[0].task) || "";
       rows.push([brandName, t.project, desc, "", "", fmtH(total), t.status]);
@@ -543,3 +544,5 @@ $("prevOverlay").addEventListener("mousedown", e=>{ if(e.target===$("prevOverlay
 /* ---------- boot ---------- */
 const sessName = sessionStorage.getItem("ledger.session");
 if(sessName) enter(sessName);
+setTimeout(()=>{ $("boot").classList.add("hide"); }, 900);
+setTimeout(()=>{ const b=$("boot"); if(b) b.remove(); }, 1600);
