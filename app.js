@@ -18,6 +18,13 @@ const DEFAULT_ENTRIES = [
   {project:"Research",    task:""},
 ];
 const DEFAULT_ORDER = DEFAULT_ENTRIES.map(d=>d.project);
+const DEFAULT_NAMES = DEFAULT_ORDER.map(p=>p.toLowerCase());
+// a Default-Task-brand entry named like a default counts as one, flag or not
+const isDefaultEntry = t => !!t.isDefault || (!t.brand && DEFAULT_NAMES.includes((t.project||"").trim().toLowerCase()));
+const defaultRank = t => {
+  const i = DEFAULT_NAMES.indexOf((t.project||"").trim().toLowerCase());
+  return i<0 ? 99 : i;
+};
 const brandCls = v => (BRANDS.find(b=>b.v===v)||BRANDS[0]).cls;
 
 /* ---------- helpers ---------- */
@@ -128,6 +135,7 @@ function migrate(){
       if(t.manualHours===undefined) t.manualHours=null;
       if(t.isDefault===undefined) t.isDefault=false;
       if(t.live && typeof t.live==="string") t.live={task:t.task||"",start:t.live};
+      if(!t.isDefault && isDefaultEntry(t)) t.isDefault=true;
       (t.sessions||[]).forEach(s=>{ if(s.task===undefined) s.task=t.task||""; });
     }
   }
@@ -154,14 +162,12 @@ const tasks = () => store.days[viewDay] || (store.days[viewDay]=[]);
 /* ---------- ordering (defaults first in fixed order, then Default-Task brand, then brands by hours) ---------- */
 function orderedIndices(list){
   const bh = {};
-  list.forEach(t=>{ if(!t.isDefault) bh[t.brand]=(bh[t.brand]||0)+taskHours(t); });
+  list.forEach(t=>{ if(!isDefaultEntry(t)) bh[t.brand]=(bh[t.brand]||0)+taskHours(t); });
   return list.map((t,i)=>i).sort((a,b)=>{
     const A=list[a], B=list[b];
-    if(!!A.isDefault !== !!B.isDefault) return A.isDefault?-1:1;
-    if(A.isDefault && B.isDefault){
-      const oa=DEFAULT_ORDER.indexOf(A.project), ob=DEFAULT_ORDER.indexOf(B.project);
-      return ((oa<0?99:oa)-(ob<0?99:ob)) || (a-b);
-    }
+    const da=isDefaultEntry(A), db=isDefaultEntry(B);
+    if(da !== db) return da?-1:1;
+    if(da && db) return (defaultRank(A)-defaultRank(B)) || (a-b);
     if(A.brand!==B.brand){
       if(A.brand==="") return -1;
       if(B.brand==="") return 1;
@@ -483,9 +489,10 @@ $("copyBtn").onclick = ()=>{
     const total = exportHours(t);
     if(total<=0) continue; // skip zero-hour entries
     const brandName = t.brand || "Default Task";
-    if(t.isDefault || !t.sessions.length){
+    if(isDefaultEntry(t) || !t.sessions.length){
       // final value only — one row
-      rows.push([brandName, t.project, t.task, "", "", fmtH(total), t.status].join("\t"));
+      const desc = t.task || (t.sessions[0] && t.sessions[0].task) || "";
+      rows.push([brandName, t.project, desc, "", "", fmtH(total), t.status].join("\t"));
     } else {
       t.sessions.forEach((s,k)=>{
         rows.push([
