@@ -1,241 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="dark" data-accent="cyan" data-font="mono" data-fsize="m">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LEDGER // Daily Ops</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#07090d;
-  --bg-glow1:rgba(56,225,255,.07);
-  --bg-glow2:rgba(56,120,255,.05);
-  --panel:rgba(16,22,30,.82);
-  --panel-solid:#101620;
-  --panel-2:rgba(255,255,255,.03);
-  --ink:#dbe7f0;
-  --ink-strong:#f2f8fc;
-  --ink-soft:#6d7f8f;
-  --line:rgba(120,160,190,.16);
-  --line-strong:rgba(120,180,220,.32);
-  --cyan:#38e1ff;
-  --cyan-dim:rgba(56,225,255,.12);
-  --green:#3ddc84;--green-bg:rgba(61,220,132,.12);
-  --blue:#5ea8ff;--blue-bg:rgba(94,168,255,.12);
-  --red:#ff5c69;--red-bg:rgba(255,92,105,.12);
-  --amber:#ffc24b;--amber-bg:rgba(255,194,75,.12);
-  --radius:14px;
-  --shadow:0 30px 70px -30px rgba(0,0,0,.8), 0 0 0 1px var(--line);
-  --grid-line:rgba(120,180,220,.045);
-}
-[data-theme="light"]{
-  --bg:#eef1f5;
-  --bg-glow1:rgba(0,140,200,.06);
-  --bg-glow2:rgba(60,80,255,.04);
-  --panel:rgba(255,255,255,.9);
-  --panel-solid:#ffffff;
-  --panel-2:rgba(10,40,70,.035);
-  --ink:#22303c;
-  --ink-strong:#0d161e;
-  --ink-soft:#67788a;
-  --line:rgba(30,70,110,.14);
-  --line-strong:rgba(30,70,110,.30);
-  --cyan:#0090b8;
-  --cyan-dim:rgba(0,144,184,.10);
-  --green:#0f8a4d;--green-bg:rgba(15,138,77,.12);
-  --blue:#1d64c0;--blue-bg:rgba(29,100,192,.10);
-  --red:#c22736;--red-bg:rgba(194,39,54,.10);
-  --amber:#9a6b00;--amber-bg:rgba(154,107,0,.12);
-  --shadow:0 24px 60px -30px rgba(20,40,60,.35), 0 0 0 1px var(--line);
-  --grid-line:rgba(30,70,110,.05);
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{
-  font-family:"IBM Plex Mono",ui-monospace,monospace;
-  background:
-    radial-gradient(1000px 600px at 80% -10%, var(--bg-glow1), transparent 60%),
-    radial-gradient(800px 600px at -5% 100%, var(--bg-glow2), transparent 55%),
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
-    var(--bg);
-  background-size:auto,auto,44px 44px,44px 44px,auto;
-  color:var(--ink);
-  font-size:13.5px;line-height:1.55;
-  transition:background .3s,color .3s;
-}
-h1,h2,h3,.disp{font-family:"Chakra Petch",sans-serif}
-button{font:inherit;cursor:pointer;color:inherit}
-input,select{font:inherit;color:var(--ink)}
-input:focus,select:focus{outline:1.5px solid var(--cyan);outline-offset:-1px}
-::placeholder{color:var(--ink-soft);opacity:.7}
-
-/* ---------- chrome ---------- */
-.btn{
-  border:1px solid var(--line-strong);background:transparent;color:var(--ink-strong);
-  padding:9px 18px;border-radius:9px;font-weight:600;font-family:"Chakra Petch",sans-serif;
-  letter-spacing:.04em;text-transform:uppercase;font-size:12.5px;
-  transition:.15s;
-}
-.btn:hover{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-dim)}
-.btn.pri{border-color:var(--cyan);background:var(--cyan);color:#04151b;box-shadow:0 0 18px -4px var(--cyan)}
-.btn.pri:hover{filter:brightness(1.12);color:#04151b}
-.btn.full{width:100%;margin-top:10px}
-.btn.small{padding:5px 12px;font-size:11px}
-.icon-btn{border:1px solid var(--line);background:transparent;border-radius:7px;padding:3px 9px;font-size:12px;color:var(--ink-soft);transition:.12s}
-.icon-btn:hover{border-color:var(--cyan);color:var(--cyan)}
-.icon-btn.rec{border-color:var(--red);color:var(--red);font-weight:600}
-.icon-btn.rec.live{background:var(--red);color:#fff;animation:pulse 1.15s infinite;box-shadow:0 0 16px -2px var(--red)}
-@keyframes pulse{50%{opacity:.65}}
-
-.field{margin-bottom:14px}
-.field label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.18em;color:var(--ink-soft);margin-bottom:6px;font-family:"Chakra Petch",sans-serif;font-weight:600}
-.field input,.field select{
-  width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);
-}
-select option{background:var(--panel-solid);color:var(--ink)}
-
-/* ---------- login ---------- */
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-.login-card{
-  width:min(420px,100%);background:var(--panel);backdrop-filter:blur(14px);
-  border-radius:var(--radius);padding:42px 36px 30px;box-shadow:var(--shadow);
-  position:relative;overflow:hidden;
-}
-.login-card::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);box-shadow:0 0 20px var(--cyan)}
-.login-card h1{font-size:34px;font-weight:700;letter-spacing:.08em;color:var(--ink-strong)}
-.login-card h1 .tick{color:var(--cyan)}
-.login-card p.sub{color:var(--ink-soft);margin:4px 0 28px;font-size:12px;letter-spacing:.06em}
-.login-msg{color:var(--red);font-size:12px;min-height:18px;margin-top:8px}
-.login-hint{font-size:11px;color:var(--ink-soft);margin-top:18px;border-top:1px dashed var(--line);padding-top:12px;line-height:1.7}
-
-/* ---------- shell ---------- */
-.app{max-width:1150px;margin:0 auto;padding:30px 22px 90px;display:none}
-header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.mast h1{font-size:30px;font-weight:700;letter-spacing:.1em;color:var(--ink-strong);line-height:1.1}
-.mast h1 .tick{color:var(--cyan)}
-.mast .who{color:var(--ink-soft);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase}
-header.top .spacer{flex:1}
-.statgrid{display:flex;gap:10px}
-.stat{
-  background:var(--panel);border-radius:12px;padding:9px 18px 7px;text-align:right;min-width:104px;
-  box-shadow:0 0 0 1px var(--line);position:relative;overflow:hidden;
-}
-.stat::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--cyan);opacity:.5}
-.stat .v{font-family:"Chakra Petch",sans-serif;font-size:23px;font-weight:700;color:var(--ink-strong);line-height:1.1;font-variant-numeric:tabular-nums}
-.stat .l{font-size:9.5px;text-transform:uppercase;letter-spacing:.2em;color:var(--ink-soft)}
-.gearbtn{border:1px solid var(--line);background:var(--panel);border-radius:10px;width:38px;height:38px;font-size:16px;transition:.2s}
-.gearbtn:hover{border-color:var(--cyan);color:var(--cyan);transform:rotate(45deg)}
-
-.daytabs{display:flex;gap:8px;margin:24px 0 14px}
-.daytab{
-  border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 16px;
-  color:var(--ink-soft);font-size:12px;letter-spacing:.05em;transition:.15s;font-family:"Chakra Petch",sans-serif;font-weight:600;
-}
-.daytab:hover{border-color:var(--line-strong);color:var(--ink)}
-.daytab.active{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-dim);box-shadow:0 0 14px -6px var(--cyan)}
-
-.panel{background:var(--panel);backdrop-filter:blur(14px);border-radius:var(--radius);box-shadow:var(--shadow)}
-
-/* ---------- add form ---------- */
-.addbar{display:grid;grid-template-columns:150px 1fr 1.4fr 145px auto;gap:12px;padding:18px 16px;align-items:end;border-bottom:1px solid var(--line-strong)}
-.addbar .field{margin:0}
-@media(max-width:880px){.addbar{grid-template-columns:1fr 1fr}}
-
-/* ---------- brand dropdown ---------- */
-.branddd{position:relative}
-.branddd-btn{
-  width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;
-  padding:7.5px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);text-align:left;
-}
-.branddd-btn:focus{outline:1.5px solid var(--cyan);outline-offset:-1px}
-.branddd-btn .caret{font-size:9px;color:var(--ink-soft)}
-.branddd-menu{
-  position:absolute;top:calc(100% + 6px);left:0;min-width:100%;z-index:30;
-  background:var(--panel-solid);border:1px solid var(--line-strong);border-radius:11px;padding:6px;
-  box-shadow:0 18px 40px -12px rgba(0,0,0,.6);display:none;
-}
-.branddd.open .branddd-menu{display:block;animation:drop .13s ease}
-@keyframes drop{from{opacity:0;transform:translateY(-4px)}to{opacity:1}}
-.branddd-item{display:flex;width:100%;align-items:center;gap:8px;padding:7px 9px;border:none;background:none;border-radius:8px}
-.branddd-item:hover{background:var(--cyan-dim)}
-.bpill{
-  display:inline-block;padding:2px 11px;border-radius:6px;font-size:11px;font-weight:600;letter-spacing:.05em;
-  font-family:"Chakra Petch",sans-serif;border:1px solid transparent;
-}
-.b-KN{background:rgba(255,194,75,.16);color:var(--amber);border-color:rgba(255,194,75,.35)}
-.b-ZW{background:rgba(160,170,180,.14);color:var(--ink);border-color:rgba(160,170,180,.4)}
-.b-RW{background:var(--green-bg);color:var(--green);border-color:rgba(61,220,132,.35)}
-.b-AUJ{background:var(--red-bg);color:var(--red);border-color:rgba(255,92,105,.35)}
-.b-SV{background:var(--blue-bg);color:var(--blue);border-color:rgba(94,168,255,.35)}
-.b-none{background:var(--panel-2);color:var(--ink-soft);border-color:var(--line)}
-
-/* ---------- table ---------- */
-table.sheet{width:100%;border-collapse:collapse;font-size:13px}
-.sheet th{
-  text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.22em;color:var(--ink-soft);
-  padding:11px 14px;border-bottom:1px solid var(--line-strong);font-family:"Chakra Petch",sans-serif;font-weight:600;
-}
-.sheet td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
-.sheet tbody tr:hover td{background:var(--cyan-dim)}
-.sheet .num{font-variant-numeric:tabular-nums;text-align:right;font-size:14px;color:var(--ink-strong)}
-.num.editable{cursor:pointer;text-decoration:underline dotted var(--ink-soft) 1px;text-underline-offset:4px}
-.status-sel{border:1px solid transparent;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:"Chakra Petch",sans-serif;letter-spacing:.03em}
-.st-done{background:var(--green-bg);color:var(--green)}
-.st-progress{background:var(--blue-bg);color:var(--blue)}
-.st-paused{background:var(--red-bg);color:var(--red)}
-.st-preview{background:var(--amber-bg);color:var(--amber)}
-.projcell{color:var(--ink-strong);font-weight:500}
-.taskdesc{color:var(--ink-soft);font-size:12px}
-.sess{font-variant-numeric:tabular-nums;font-size:12px;line-height:1.8;white-space:nowrap}
-.sess .slabel{color:var(--ink)}
-.sess .stime{color:var(--ink-soft)}
-.sess.livesess{color:var(--red)}
-.rowbtns{display:flex;gap:6px;justify-content:flex-end}
-.empty{padding:56px 40px;text-align:center;color:var(--ink-soft)}
-.empty .disp{font-size:22px;margin-bottom:6px;color:var(--ink-strong);letter-spacing:.05em}
-
-/* ---------- footer ---------- */
-.foot{display:flex;align-items:center;gap:14px;padding:16px;border-top:1px solid var(--line-strong);flex-wrap:wrap}
-.foot .total{font-family:"Chakra Petch",sans-serif;font-size:21px;font-weight:700;color:var(--ink-strong)}
-.foot .total .u{color:var(--cyan);font-size:13px}
-.foot .spacer{flex:1}
-
-/* ---------- modal ---------- */
-.overlay{position:fixed;inset:0;background:rgba(2,6,10,.6);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
-.overlay.show{display:flex}
-.modal{
-  width:min(430px,100%);background:var(--panel-solid);border-radius:var(--radius);
-  box-shadow:var(--shadow);padding:26px 26px 22px;position:relative;overflow:hidden;
-  animation:drop .15s ease;
-}
-.modal::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent)}
-.modal h3{font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-strong);margin-bottom:16px}
-.modal .mrow{display:flex;gap:10px}
-.modal .mrow .field{flex:1}
-.modal .mbtns{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
-.modal .merr{color:var(--red);font-size:11.5px;min-height:16px;margin-top:2px}
-
-/* settings */
-.setrow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line)}
-.setrow:last-of-type{border-bottom:none}
-.setrow .sl{font-size:12.5px}
-.setrow .sd{font-size:10.5px;color:var(--ink-soft)}
-.seg{display:flex;border:1px solid var(--line-strong);border-radius:9px;overflow:hidden}
-.seg button{padding:6px 16px;background:transparent;border:none;font-size:11.5px;font-family:"Chakra Petch",sans-serif;font-weight:600;letter-spacing:.05em;color:var(--ink-soft)}
-.seg button.on{background:var(--cyan);color:#04151b}
-
-.toast{
-  position:fixed;bottom:26px;left:50%;transform:translate(-50%,20px);opacity:0;
-  background:var(--panel-solid);color:var(--ink-strong);border:1px solid var(--cyan);
-  padding:10px 22px;border-radius:10px;font-size:12.5px;letter-spacing:.03em;
-  transition:.25s;pointer-events:none;z-index:200;box-shadow:0 0 24px -6px var(--cyan);
-}
-.toast.show{opacity:1;transform:translate(-50%,0)}
-.note{font-size:11px;color:var(--ink-soft);margin-top:16px;line-height:1.8;letter-spacing:.02em}
-kbd{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:10.5px}
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -304,12 +75,6 @@ kbd{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;pad
       <button class="btn" id="copyBtn">⧉ Copy for Sheets</button>
     </div>
   </div>
-
-  <p class="note">
-    ▶ asks for the timeblock's task, then starts the clock — every start/stop is its own labelled block.
-    <kbd>+ block</kbd> adds one manually. Click a dotted hours figure to set hours directly (for entries with no timeblocks).
-    ⧉ copies tab-separated rows — Brand → Project → Task → Start → End → Hours → Status — one row per timeblock, pasting cleanly into the sheet.
-  </p>
 </div>
 
 <!-- timeblock modal -->
@@ -320,6 +85,10 @@ kbd{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;pad
     <div class="mrow" id="bTimes" style="display:none">
       <div class="field"><label>Start (HH:MM)</label><input id="bStart" placeholder="10:51"></div>
       <div class="field"><label>End (HH:MM)</label><input id="bEnd" placeholder="10:59"></div>
+    </div>
+    <div class="field" id="bRemindWrap" style="display:none">
+      <label>Remind every (minutes, empty = off)</label>
+      <input id="bRemind" inputmode="numeric" placeholder="30">
     </div>
     <div class="merr" id="bErr"></div>
     <div class="mbtns">
@@ -355,6 +124,42 @@ kbd{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;pad
       </div>
     </div>
     <div class="setrow">
+      <div><div class="sl">Accent</div><div class="sd">Highlight colour</div></div>
+      <div class="dots" id="accentDots">
+        <button type="button" class="dot d-cyan" data-ac="cyan" title="Cyan"></button>
+        <button type="button" class="dot d-emerald" data-ac="emerald" title="Emerald"></button>
+        <button type="button" class="dot d-amber" data-ac="amber" title="Amber"></button>
+        <button type="button" class="dot d-magenta" data-ac="magenta" title="Magenta"></button>
+        <button type="button" class="dot d-violet" data-ac="violet" title="Violet"></button>
+      </div>
+    </div>
+    <div class="setrow">
+      <div><div class="sl">Font</div><div class="sd">Body typeface</div></div>
+      <div class="seg" id="fontSeg">
+        <button type="button" data-fn="mono">MONO</button>
+        <button type="button" data-fn="sans">SANS</button>
+        <button type="button" data-fn="serif">SERIF</button>
+      </div>
+    </div>
+    <div class="setrow">
+      <div><div class="sl">Text size</div><div class="sd">Overall scale</div></div>
+      <div class="seg" id="sizeSeg">
+        <button type="button" data-fs="s">S</button>
+        <button type="button" data-fs="m">M</button>
+        <button type="button" data-fs="l">L</button>
+      </div>
+    </div>
+    <div class="setrow">
+      <div><div class="sl">Timer reminders</div><div class="sd">Ping while a timeblock keeps running</div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="remindMins" inputmode="numeric" title="Default minutes" style="width:56px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);text-align:center">
+        <div class="seg" id="remindSeg">
+          <button type="button" data-rm="1">ON</button>
+          <button type="button" data-rm="0">OFF</button>
+        </div>
+      </div>
+    </div>
+    <div class="setrow">
       <div><div class="sl">Seed daily defaults</div><div class="sd">Meeting · Discussions · Upskilling · Research</div></div>
       <div class="seg" id="seedSeg">
         <button type="button" data-sd="1">ON</button>
@@ -373,339 +178,6 @@ kbd{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;pad
 
 <div class="toast" id="toast"></div>
 
-<script>
-"use strict";
-const $ = id => document.getElementById(id);
-const LS_USERS = "ledger.users";
-const LS_SET = "ledger.settings";
-const STATUSES = {"Done":"st-done","In Progress":"st-progress","Paused":"st-paused","Preview Sent":"st-preview"};
-const BRANDS = [
-  {v:"",    label:"Default Task", cls:"b-none"},
-  {v:"KN",  label:"KN",  cls:"b-KN"},
-  {v:"ZW",  label:"ZW",  cls:"b-ZW"},
-  {v:"RW",  label:"RW",  cls:"b-RW"},
-  {v:"AUJ", label:"AUJ", cls:"b-AUJ"},
-  {v:"SV",  label:"SV",  cls:"b-SV"},
-];
-const DEFAULT_ENTRIES = [
-  {project:"Meeting",     task:"FNR, Other Meetings"},
-  {project:"Discussions", task:""},
-  {project:"Upskilling",  task:""},
-  {project:"Research",    task:""},
-];
-const brandCls = v => (BRANDS.find(b=>b.v===v)||BRANDS[0]).cls;
-
-/* ---------- helpers ---------- */
-const todayKey = () => new Date().toISOString().slice(0,10);
-function prevWorkingDay(key){
-  const d = new Date(key + "T12:00:00");
-  do { d.setDate(d.getDate()-1); } while (d.getDay()===0 || d.getDay()===6);
-  return d.toISOString().slice(0,10);
-}
-const fmtDate = key => new Date(key+"T12:00:00").toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
-const hhmmss = d => d.toTimeString().slice(0,8);
-function toSec(t){ if(!t) return null; const p=t.split(":").map(Number); return p[0]*3600+(p[1]||0)*60+(p[2]||0); }
-function hours(start,end){
-  let s=toSec(start), e=toSec(end);
-  if(s==null||e==null) return 0;
-  if(e<s) e+=86400;
-  return (e-s)/3600;
-}
-const fmtH = h => (Math.round(h*100)/100).toFixed(2);
-const validT = t => /^\d{1,2}:\d{2}(:\d{2})?$/.test((t||"").trim());
-const norm = t => { const p=t.trim().split(":"); return p.length===2?t.trim()+":00":t.trim(); };
-const esc = s => (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const short = t => (t||"").length>7 ? t.slice(0,5) : t; // HH:MM display
-async function hash(str){
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2200); }
-
-/* ---------- settings ---------- */
-let settings = JSON.parse(localStorage.getItem(LS_SET) || '{"theme":"dark","seed":true}');
-function saveSettings(){ localStorage.setItem(LS_SET, JSON.stringify(settings)); applySettings(); }
-function applySettings(){
-  document.documentElement.dataset.theme = settings.theme;
-  $("themeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.th===settings.theme));
-  $("seedSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.sd==="1")===!!settings.seed));
-}
-$("themeSeg").addEventListener("click", e=>{ if(e.target.dataset.th){ settings.theme=e.target.dataset.th; saveSettings(); }});
-$("seedSeg").addEventListener("click", e=>{ if(e.target.dataset.sd!==undefined){ settings.seed=e.target.dataset.sd==="1"; saveSettings(); }});
-$("settingsBtn").onclick = ()=>$("setOverlay").classList.add("show");
-$("setClose").onclick = ()=>$("setOverlay").classList.remove("show");
-applySettings();
-
-/* ---------- storage ---------- */
-let user=null, store=null, viewDay=null, curBrand="";
-const dataKey = () => "ledger.data." + user;
-function newEntry(o){ return Object.assign({brand:"",project:"",task:"",status:"Done",sessions:[],live:null,manualHours:null,isDefault:false}, o); }
-function migrate(){
-  for(const day of Object.values(store.days)){
-    for(const t of day){
-      if(t.manualHours===undefined) t.manualHours=null;
-      if(t.isDefault===undefined) t.isDefault=false;
-      if(t.live && typeof t.live==="string") t.live={task:t.task||"",start:t.live};
-      (t.sessions||[]).forEach(s=>{ if(s.task===undefined) s.task=t.task||""; });
-    }
-  }
-}
-function seedDefaults(day){
-  if(!settings.seed) return;
-  const list = store.days[day];
-  if(list.length) return;
-  DEFAULT_ENTRIES.forEach(d=>list.push(newEntry({project:d.project, task:d.task, isDefault:true})));
-}
-function load(){
-  store = JSON.parse(localStorage.getItem(dataKey()) || "{}");
-  if(!store.days) store.days = {};
-  const keep = new Set([todayKey(), prevWorkingDay(todayKey())]);
-  for(const k of Object.keys(store.days)) if(!keep.has(k)) delete store.days[k];
-  if(!store.days[todayKey()]) store.days[todayKey()] = [];
-  migrate();
-  seedDefaults(todayKey());
-  save();
-}
-const save = () => localStorage.setItem(dataKey(), JSON.stringify(store));
-const tasks = () => store.days[viewDay] || (store.days[viewDay]=[]);
-
-/* ---------- auth ---------- */
-$("loginForm").addEventListener("submit", async e=>{
-  e.preventDefault();
-  const name = $("loginName").value.trim();
-  const pin  = $("loginPin").value;
-  if(!name||!pin) return;
-  const users = JSON.parse(localStorage.getItem(LS_USERS)||"{}");
-  const h = await hash(name.toLowerCase()+"::"+pin);
-  if(users[name.toLowerCase()]){
-    if(users[name.toLowerCase()] !== h){ $("loginMsg").textContent="Wrong PIN for this name."; return; }
-  } else {
-    users[name.toLowerCase()] = h;
-    localStorage.setItem(LS_USERS, JSON.stringify(users));
-    toast("Account created on this device");
-  }
-  sessionStorage.setItem("ledger.session", name);
-  enter(name);
-});
-$("logoutBtn").onclick = ()=>{ sessionStorage.removeItem("ledger.session"); location.reload(); };
-
-function enter(name){
-  user = name.toLowerCase();
-  $("loginView").style.display="none";
-  $("appView").style.display="block";
-  $("hdrName").innerHTML = esc(name.charAt(0).toUpperCase()+name.slice(1)) + '<span class="tick">_</span>';
-  $("setWho").textContent = "Signed in as " + name;
-  load();
-  viewDay = todayKey();
-  buildBrandMenu();
-  render();
-  setInterval(tick, 1000);
-  tick();
-}
-
-/* ---------- brand dropdown ---------- */
-function buildBrandMenu(){
-  $("brandMenu").innerHTML = BRANDS.map(b=>
-    `<button type="button" class="branddd-item" data-b="${b.v}" role="option"><span class="bpill ${b.cls}">${b.label}</span></button>`).join("");
-  $("brandMenu").querySelectorAll(".branddd-item").forEach(el=>el.onclick=()=>{
-    curBrand = el.dataset.b;
-    const b = BRANDS.find(x=>x.v===curBrand)||BRANDS[0];
-    $("brandCur").innerHTML = `<span class="bpill ${b.cls}">${b.label}</span>`;
-    $("brandDD").classList.remove("open");
-  });
-}
-$("brandBtn").onclick = e=>{ e.stopPropagation(); $("brandDD").classList.toggle("open"); };
-document.addEventListener("click", e=>{ if(!$("brandDD").contains(e.target)) $("brandDD").classList.remove("open"); });
-document.addEventListener("keydown", e=>{
-  if(e.key==="Escape"){ $("brandDD").classList.remove("open"); closeBlock(); $("editOverlay").classList.remove("show"); $("setOverlay").classList.remove("show"); }
-});
-
-/* ---------- timeblock modal ---------- */
-let blockCtx = null; // {i, manual}
-function openBlock(i, manual){
-  const t = tasks()[i];
-  blockCtx = {i, manual};
-  $("blockTitle").textContent = manual ? "Add timeblock" : "Start timeblock";
-  $("bOk").textContent = manual ? "Add" : "Start ▶";
-  const last = t.sessions[t.sessions.length-1];
-  $("bTask").value = last ? last.task : (t.task||"");
-  $("bTimes").style.display = manual ? "flex" : "none";
-  $("bStart").value = ""; $("bEnd").value = ""; $("bErr").textContent="";
-  $("blockOverlay").classList.add("show");
-  setTimeout(()=>$("bTask").select(),30);
-}
-function closeBlock(){ $("blockOverlay").classList.remove("show"); blockCtx=null; }
-$("bCancel").onclick = closeBlock;
-$("blockOverlay").addEventListener("mousedown", e=>{ if(e.target===$("blockOverlay")) closeBlock(); });
-$("blockModal").addEventListener("submit", e=>{
-  e.preventDefault();
-  if(!blockCtx) return;
-  const t = tasks()[blockCtx.i];
-  const label = $("bTask").value.trim();
-  if(blockCtx.manual){
-    const st=$("bStart").value, en=$("bEnd").value;
-    if(!validT(st)||!validT(en)){ $("bErr").textContent="Times must be HH:MM (or HH:MM:SS)."; return; }
-    t.sessions.push({task:label, start:norm(st), end:norm(en)});
-  } else {
-    t.live = {task:label, start:hhmmss(new Date())};
-  }
-  save(); closeBlock(); renderTable();
-});
-
-/* ---------- edit modal ---------- */
-let editIdx = null;
-function openEdit(i){
-  const t = tasks()[i];
-  editIdx = i;
-  $("eTask").value = t.task||"";
-  $("eHours").value = t.manualHours!=null ? String(t.manualHours) : "";
-  $("eErr").textContent="";
-  $("editOverlay").classList.add("show");
-  setTimeout(()=>$("eTask").select(),30);
-}
-$("eCancel").onclick = ()=>$("editOverlay").classList.remove("show");
-$("editOverlay").addEventListener("mousedown", e=>{ if(e.target===$("editOverlay")) $("editOverlay").classList.remove("show"); });
-$("editModal").addEventListener("submit", e=>{
-  e.preventDefault();
-  if(editIdx==null) return;
-  const t = tasks()[editIdx];
-  const hv = $("eHours").value.trim();
-  if(hv && isNaN(parseFloat(hv))){ $("eErr").textContent="Hours must be a number, e.g. 0.5"; return; }
-  t.task = $("eTask").value.trim();
-  t.manualHours = hv ? Math.round(parseFloat(hv)*100)/100 : null;
-  save(); $("editOverlay").classList.remove("show"); renderTable();
-});
-
-/* ---------- rendering ---------- */
-function render(){
-  $("hdrDate").textContent = fmtDate(viewDay) + (viewDay===todayKey() ? " · TODAY" : "");
-  renderTabs(); renderTable(); renderDatalists();
-  $("addBar").style.opacity = viewDay===todayKey() ? 1 : .45;
-}
-function renderTabs(){
-  const prev = prevWorkingDay(todayKey());
-  const tabs = [[todayKey(),"TODAY"],[prev,"PREV WORKING DAY"]];
-  $("dayTabs").innerHTML = tabs.map(([k,label])=>
-    `<button class="daytab ${k===viewDay?"active":""}" data-day="${k}">${label} · ${fmtDate(k)}</button>`).join("");
-  [...$("dayTabs").children].forEach(b=>b.onclick=()=>{viewDay=b.dataset.day;render();});
-}
-function renderDatalists(){
-  const all = Object.values(store.days).flat();
-  $("projectList").innerHTML = [...new Set(all.map(t=>t.project).filter(Boolean))].map(v=>`<option value="${v}">`).join("");
-}
-function taskHours(t){
-  let h = t.sessions.reduce((a,s)=>a+hours(s.start,s.end),0);
-  if(t.live) h += hours(t.live.start, hhmmss(new Date()));
-  if(!t.sessions.length && !t.live && t.manualHours!=null) h = t.manualHours;
-  return h;
-}
-function renderTable(){
-  const list = tasks();
-  const body = $("taskBody");
-  if(!list.length){
-    body.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="disp">NO ENTRIES ${viewDay===todayKey()?"YET":"THIS DAY"}</div>Add one above${viewDay===todayKey()?" or hit ▶ to start a timeblock":""}.</div></td></tr>`;
-  } else {
-    body.innerHTML = list.map((t,i)=>{
-      const editable = viewDay===todayKey();
-      const sess = t.sessions.map(s=>
-        `<div class="sess">${s.task?`<span class="slabel">${esc(s.task)}</span> · `:""}<span class="stime">${short(s.start)}–${short(s.end)} (${fmtH(hours(s.start,s.end))})</span></div>`).join("")
-        + (t.live?`<div class="sess livesess">${t.live.task?esc(t.live.task)+" · ":""}${short(t.live.start)} – now…</div>`:"");
-      const noBlocks = !t.sessions.length && !t.live;
-      return `<tr data-i="${i}">
-        <td><span class="bpill ${brandCls(t.brand)}">${t.brand?esc(t.brand):"Default Task"}</span></td>
-        <td class="projcell">${esc(t.project)}</td>
-        <td class="taskdesc">${esc(t.task)||'<span style="opacity:.4">—</span>'}</td>
-        <td>${sess||`<span style="color:var(--ink-soft);opacity:.5">—</span>`}</td>
-        <td class="num ${noBlocks&&editable?"editable":""}" ${noBlocks&&editable?`data-eh="${i}" title="Click to set hours"`:""} data-hours="${i}"><strong>${fmtH(taskHours(t))}</strong></td>
-        <td><select class="status-sel ${STATUSES[t.status]||""}" data-st="${i}" ${editable?"":"disabled"}>
-          ${Object.keys(STATUSES).map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}
-        </select></td>
-        <td><div class="rowbtns">
-          ${editable ? (t.live
-            ? `<button class="icon-btn rec live" data-stop="${i}">⏹ stop</button>`
-            : `<button class="icon-btn rec" data-go="${i}" title="Start timeblock">▶</button>`)
-          : ""}
-          ${editable?`<button class="icon-btn" data-sess="${i}" title="Add manual timeblock">+ block</button>
-          <button class="icon-btn" data-edit="${i}" title="Edit">✎</button>
-          <button class="icon-btn" data-del="${i}" title="Delete">✕</button>`:""}
-        </div></td>
-      </tr>`;
-    }).join("");
-  }
-  const total = list.reduce((a,t)=>a+taskHours(t),0);
-  $("dayTotal").textContent = fmtH(total);
-  $("statHours").textContent = fmtH(total);
-  $("statTasks").textContent = list.length;
-
-  body.querySelectorAll("[data-st]").forEach(el=>el.onchange=()=>{ tasks()[+el.dataset.st].status=el.value; save(); renderTable(); });
-  body.querySelectorAll("[data-del]").forEach(el=>el.onclick=()=>{ if(confirm("Delete this entry?")){ tasks().splice(+el.dataset.del,1); save(); renderTable(); }});
-  body.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>openBlock(+el.dataset.go,false));
-  body.querySelectorAll("[data-sess]").forEach(el=>el.onclick=()=>openBlock(+el.dataset.sess,true));
-  body.querySelectorAll("[data-edit]").forEach(el=>el.onclick=()=>openEdit(+el.dataset.edit));
-  body.querySelectorAll("[data-eh]").forEach(el=>el.onclick=()=>openEdit(+el.dataset.eh));
-  body.querySelectorAll("[data-stop]").forEach(el=>el.onclick=()=>{
-    const t=tasks()[+el.dataset.stop];
-    t.sessions.push({task:t.live.task, start:t.live.start, end:hhmmss(new Date())});
-    t.live=null; save(); renderTable();
-  });
-}
-
-function tick(){
-  $("statClock").textContent = new Date().toTimeString().slice(0,5);
-  if(!store) return;
-  const list = tasks();
-  list.forEach((t,i)=>{
-    if(t.live){ const cell=document.querySelector(`[data-hours="${i}"] strong`); if(cell) cell.textContent=fmtH(taskHours(t)); }
-  });
-  if(list.some(t=>t.live)){
-    const total = fmtH(list.reduce((a,t)=>a+taskHours(t),0));
-    $("dayTotal").textContent = total;
-    $("statHours").textContent = total;
-  }
-}
-
-/* ---------- add entry ---------- */
-$("addBtn").onclick = ()=>{
-  if(viewDay!==todayKey()){ toast("Switch to Today to add entries"); return; }
-  const project=$("fProject").value.trim();
-  const task=$("fTask").value.trim();
-  if(!project && !task){ $("fProject").focus(); return; }
-  tasks().push(newEntry({brand:curBrand, project, task, status:$("fStatus").value}));
-  $("fProject").value=""; $("fTask").value=""; save(); render();
-};
-["fProject","fTask"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("addBtn").click();}}));
-
-/* ---------- copy for sheets ---------- */
-$("copyBtn").onclick = ()=>{
-  const list = tasks();
-  if(!list.length){ toast("Nothing to copy"); return; }
-  const rows=[];
-  for(const t of list){
-    if(t.sessions.length){
-      t.sessions.forEach((s,i)=>{
-        rows.push([
-          i===0 ? t.brand : "", i===0 ? t.project : "",
-          s.task || (i===0 ? t.task : ""),
-          s.start, s.end, fmtH(hours(s.start,s.end)),
-          i===0 ? t.status : ""
-        ].join("\t"));
-      });
-    } else {
-      rows.push([t.brand, t.project, t.task, "", "", fmtH(taskHours(t)), t.status].join("\t"));
-    }
-  }
-  const tsv = rows.join("\n");
-  navigator.clipboard.writeText(tsv).then(
-    ()=>toast(`Copied ${rows.length} row${rows.length>1?"s":""} — paste into the sheet`),
-    ()=>{
-      const ta=document.createElement("textarea"); ta.value=tsv; document.body.appendChild(ta);
-      ta.select(); document.execCommand("copy"); ta.remove(); toast("Copied");
-    });
-};
-
-/* ---------- boot ---------- */
-const sessName = sessionStorage.getItem("ledger.session");
-if(sessName) enter(sessName);
-</script>
+<script src="app.js"></script>
 </body>
 </html>

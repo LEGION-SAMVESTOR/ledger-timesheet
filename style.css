@@ -1,0 +1,256 @@
+:root{
+  --bg:#07090d;
+  --bg-glow1:rgba(56,225,255,.07);
+  --bg-glow2:rgba(56,120,255,.05);
+  --panel:rgba(16,22,30,.82);
+  --panel-solid:#101620;
+  --panel-2:rgba(255,255,255,.03);
+  --ink:#dbe7f0;
+  --ink-strong:#f2f8fc;
+  --ink-soft:#6d7f8f;
+  --line:rgba(120,160,190,.16);
+  --line-strong:rgba(120,180,220,.32);
+  --cyan:#38e1ff;
+  --cyan-dim:rgba(56,225,255,.12);
+  --accent-ink:#04151b;
+  --green:#3ddc84;--green-bg:rgba(61,220,132,.12);
+  --blue:#5ea8ff;--blue-bg:rgba(94,168,255,.12);
+  --red:#ff5c69;--red-bg:rgba(255,92,105,.12);
+  --amber:#ffc24b;--amber-bg:rgba(255,194,75,.12);
+  --radius:14px;
+  --shadow:0 30px 70px -30px rgba(0,0,0,.8), 0 0 0 1px var(--line);
+  --grid-line:rgba(120,180,220,.045);
+  --font-body:"IBM Plex Mono",ui-monospace,monospace;
+  --fs-base:13.5px;
+}
+[data-theme="light"]{
+  --bg:#eef1f5;
+  --bg-glow1:rgba(0,140,200,.06);
+  --bg-glow2:rgba(60,80,255,.04);
+  --panel:rgba(255,255,255,.9);
+  --panel-solid:#ffffff;
+  --panel-2:rgba(10,40,70,.035);
+  --ink:#22303c;
+  --ink-strong:#0d161e;
+  --ink-soft:#67788a;
+  --line:rgba(30,70,110,.14);
+  --line-strong:rgba(30,70,110,.30);
+  --cyan:#0090b8;
+  --cyan-dim:rgba(0,144,184,.10);
+  --accent-ink:#ffffff;
+  --green:#0f8a4d;--green-bg:rgba(15,138,77,.12);
+  --blue:#1d64c0;--blue-bg:rgba(29,100,192,.10);
+  --red:#c22736;--red-bg:rgba(194,39,54,.10);
+  --amber:#9a6b00;--amber-bg:rgba(154,107,0,.12);
+  --shadow:0 24px 60px -30px rgba(20,40,60,.35), 0 0 0 1px var(--line);
+  --grid-line:rgba(30,70,110,.05);
+}
+
+/* accents — placed after themes so they win in both */
+[data-accent="emerald"]{--cyan:#3ddc84;--cyan-dim:rgba(61,220,132,.12);--bg-glow1:rgba(61,220,132,.07)}
+[data-theme="light"][data-accent="emerald"]{--cyan:#0f8a4d;--cyan-dim:rgba(15,138,77,.10);--bg-glow1:rgba(15,138,77,.06)}
+[data-accent="amber"]{--cyan:#ffc24b;--cyan-dim:rgba(255,194,75,.13);--bg-glow1:rgba(255,194,75,.07)}
+[data-theme="light"][data-accent="amber"]{--cyan:#9a6b00;--cyan-dim:rgba(154,107,0,.10);--bg-glow1:rgba(154,107,0,.06)}
+[data-accent="magenta"]{--cyan:#ff5ce1;--cyan-dim:rgba(255,92,225,.12);--bg-glow1:rgba(255,92,225,.07)}
+[data-theme="light"][data-accent="magenta"]{--cyan:#b0189a;--cyan-dim:rgba(176,24,154,.10);--bg-glow1:rgba(176,24,154,.06)}
+[data-accent="violet"]{--cyan:#9d7bff;--cyan-dim:rgba(157,123,255,.13);--bg-glow1:rgba(157,123,255,.08)}
+[data-theme="light"][data-accent="violet"]{--cyan:#6a3fd8;--cyan-dim:rgba(106,63,216,.10);--bg-glow1:rgba(106,63,216,.06)}
+
+/* fonts & sizes */
+[data-font="sans"]{--font-body:"Chakra Petch",system-ui,sans-serif}
+[data-font="serif"]{--font-body:"Fraunces",Georgia,serif}
+[data-fsize="s"]{--fs-base:12.5px}
+[data-fsize="l"]{--fs-base:15px}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--font-body);
+  background:
+    radial-gradient(1000px 600px at 80% -10%, var(--bg-glow1), transparent 60%),
+    radial-gradient(800px 600px at -5% 100%, var(--bg-glow2), transparent 55%),
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    var(--bg);
+  background-size:auto,auto,44px 44px,44px 44px,auto;
+  color:var(--ink);
+  font-size:var(--fs-base);line-height:1.55;
+  transition:background .3s,color .3s;
+}
+h1,h2,h3,.disp{font-family:"Chakra Petch",sans-serif}
+button{font:inherit;cursor:pointer;color:inherit}
+input,select{font:inherit;color:var(--ink)}
+input:focus,select:focus{outline:1.5px solid var(--cyan);outline-offset:-1px}
+::placeholder{color:var(--ink-soft);opacity:.7}
+
+/* ---------- chrome ---------- */
+.btn{
+  border:1px solid var(--line-strong);background:transparent;color:var(--ink-strong);
+  padding:9px 18px;border-radius:9px;font-weight:600;font-family:"Chakra Petch",sans-serif;
+  letter-spacing:.04em;text-transform:uppercase;font-size:12.5px;
+  transition:.15s;
+}
+.btn:hover{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-dim)}
+.btn.pri{border-color:var(--cyan);background:var(--cyan);color:var(--accent-ink);box-shadow:0 0 18px -4px var(--cyan)}
+.btn.pri:hover{filter:brightness(1.12);color:var(--accent-ink)}
+.btn.full{width:100%;margin-top:10px}
+.btn.small{padding:5px 12px;font-size:11px}
+.icon-btn{border:1px solid var(--line);background:transparent;border-radius:7px;padding:3px 9px;font-size:12px;color:var(--ink-soft);transition:.12s}
+.icon-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.icon-btn.rec{border-color:var(--red);color:var(--red);font-weight:600}
+.icon-btn.rec.live{background:var(--red);color:#fff;animation:pulse 1.15s infinite;box-shadow:0 0 16px -2px var(--red)}
+@keyframes pulse{50%{opacity:.65}}
+
+.field{margin-bottom:14px}
+.field label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.18em;color:var(--ink-soft);margin-bottom:6px;font-family:"Chakra Petch",sans-serif;font-weight:600}
+.field input,.field select{
+  width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);
+}
+select option{background:var(--panel-solid);color:var(--ink)}
+
+/* ---------- login ---------- */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{
+  width:min(420px,100%);background:var(--panel);backdrop-filter:blur(14px);
+  border-radius:var(--radius);padding:42px 36px 30px;box-shadow:var(--shadow);
+  position:relative;overflow:hidden;
+}
+.login-card::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);box-shadow:0 0 20px var(--cyan)}
+.login-card h1{font-size:34px;font-weight:700;letter-spacing:.08em;color:var(--ink-strong)}
+.login-card h1 .tick{color:var(--cyan)}
+.login-card p.sub{color:var(--ink-soft);margin:4px 0 28px;font-size:12px;letter-spacing:.06em}
+.login-msg{color:var(--red);font-size:12px;min-height:18px;margin-top:8px}
+.login-hint{font-size:11px;color:var(--ink-soft);margin-top:18px;border-top:1px dashed var(--line);padding-top:12px;line-height:1.7}
+
+/* ---------- shell ---------- */
+.app{max-width:1150px;margin:0 auto;padding:30px 22px 90px;display:none}
+header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.mast h1{font-size:30px;font-weight:700;letter-spacing:.1em;color:var(--ink-strong);line-height:1.1}
+.mast h1 .tick{color:var(--cyan)}
+.mast .who{color:var(--ink-soft);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase}
+header.top .spacer{flex:1}
+.statgrid{display:flex;gap:10px}
+.stat{
+  background:var(--panel);border-radius:12px;padding:9px 18px 7px;text-align:right;min-width:104px;
+  box-shadow:0 0 0 1px var(--line);position:relative;overflow:hidden;
+}
+.stat::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--cyan);opacity:.5}
+.stat .v{font-family:"Chakra Petch",sans-serif;font-size:23px;font-weight:700;color:var(--ink-strong);line-height:1.1;font-variant-numeric:tabular-nums}
+.stat .l{font-size:9.5px;text-transform:uppercase;letter-spacing:.2em;color:var(--ink-soft)}
+.gearbtn{border:1px solid var(--line);background:var(--panel);border-radius:10px;width:38px;height:38px;font-size:16px;transition:.2s}
+.gearbtn:hover{border-color:var(--cyan);color:var(--cyan);transform:rotate(45deg)}
+
+.daytabs{display:flex;gap:8px;margin:24px 0 14px}
+.daytab{
+  border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 16px;
+  color:var(--ink-soft);font-size:12px;letter-spacing:.05em;transition:.15s;font-family:"Chakra Petch",sans-serif;font-weight:600;
+}
+.daytab:hover{border-color:var(--line-strong);color:var(--ink)}
+.daytab.active{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-dim);box-shadow:0 0 14px -6px var(--cyan)}
+
+.panel{background:var(--panel);backdrop-filter:blur(14px);border-radius:var(--radius);box-shadow:var(--shadow)}
+
+/* ---------- add form ---------- */
+.addbar{display:grid;grid-template-columns:150px 1fr 1.4fr 145px auto;gap:12px;padding:18px 16px;align-items:end;border-bottom:1px solid var(--line-strong)}
+.addbar .field{margin:0}
+@media(max-width:880px){.addbar{grid-template-columns:1fr 1fr}}
+
+/* ---------- brand dropdown ---------- */
+.branddd{position:relative}
+.branddd-btn{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:7.5px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);text-align:left;
+}
+.branddd-btn:focus{outline:1.5px solid var(--cyan);outline-offset:-1px}
+.branddd-btn .caret{font-size:9px;color:var(--ink-soft)}
+.branddd-menu{
+  position:absolute;top:calc(100% + 6px);left:0;min-width:100%;z-index:30;
+  background:var(--panel-solid);border:1px solid var(--line-strong);border-radius:11px;padding:6px;
+  box-shadow:0 18px 40px -12px rgba(0,0,0,.6);display:none;
+}
+.branddd.open .branddd-menu{display:block;animation:drop .13s ease}
+@keyframes drop{from{opacity:0;transform:translateY(-4px)}to{opacity:1}}
+.branddd-item{display:flex;width:100%;align-items:center;gap:8px;padding:7px 9px;border:none;background:none;border-radius:8px}
+.branddd-item:hover{background:var(--cyan-dim)}
+.bpill{
+  display:inline-block;padding:2px 11px;border-radius:6px;font-size:11px;font-weight:600;letter-spacing:.05em;
+  font-family:"Chakra Petch",sans-serif;border:1px solid transparent;
+}
+.b-KN{background:rgba(255,194,75,.16);color:var(--amber);border-color:rgba(255,194,75,.35)}
+.b-ZW{background:rgba(160,170,180,.14);color:var(--ink);border-color:rgba(160,170,180,.4)}
+.b-RW{background:var(--green-bg);color:var(--green);border-color:rgba(61,220,132,.35)}
+.b-AUJ{background:var(--red-bg);color:var(--red);border-color:rgba(255,92,105,.35)}
+.b-SV{background:var(--blue-bg);color:var(--blue);border-color:rgba(94,168,255,.35)}
+.b-none{background:var(--panel-2);color:var(--ink-soft);border-color:var(--line)}
+
+/* ---------- table ---------- */
+table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
+.sheet th{
+  text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.22em;color:var(--ink-soft);
+  padding:11px 14px;border-bottom:1px solid var(--line-strong);font-family:"Chakra Petch",sans-serif;font-weight:600;
+}
+.sheet td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.sheet tbody tr:hover td{background:var(--cyan-dim)}
+.sheet .num{font-variant-numeric:tabular-nums;text-align:right;font-size:1.02em;color:var(--ink-strong)}
+.num.editable{cursor:pointer;text-decoration:underline dotted var(--ink-soft) 1px;text-underline-offset:4px}
+.status-sel{border:1px solid transparent;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:"Chakra Petch",sans-serif;letter-spacing:.03em}
+.st-done{background:var(--green-bg);color:var(--green)}
+.st-progress{background:var(--blue-bg);color:var(--blue)}
+.st-paused{background:var(--red-bg);color:var(--red)}
+.st-preview{background:var(--amber-bg);color:var(--amber)}
+.projcell{color:var(--ink-strong);font-weight:500}
+.taskdesc{color:var(--ink-soft);font-size:.9em}
+.sess{font-variant-numeric:tabular-nums;font-size:.9em;line-height:1.8;white-space:nowrap}
+.sess .slabel{color:var(--ink)}
+.sess .stime{color:var(--ink-soft)}
+.sess.livesess{color:var(--red)}
+.rowbtns{display:flex;gap:6px;justify-content:flex-end}
+.empty{padding:56px 40px;text-align:center;color:var(--ink-soft)}
+.empty .disp{font-size:22px;margin-bottom:6px;color:var(--ink-strong);letter-spacing:.05em}
+
+/* ---------- footer ---------- */
+.foot{display:flex;align-items:center;gap:14px;padding:16px;border-top:1px solid var(--line-strong);flex-wrap:wrap}
+.foot .total{font-family:"Chakra Petch",sans-serif;font-size:21px;font-weight:700;color:var(--ink-strong)}
+.foot .total .u{color:var(--cyan);font-size:13px}
+.foot .spacer{flex:1}
+
+/* ---------- modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(2,6,10,.6);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+.overlay.show{display:flex}
+.modal{
+  width:min(440px,100%);background:var(--panel-solid);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:26px 26px 22px;position:relative;overflow:hidden;
+  animation:drop .15s ease;
+}
+.modal::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent)}
+.modal h3{font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-strong);margin-bottom:16px}
+.modal .mrow{display:flex;gap:10px}
+.modal .mrow .field{flex:1}
+.modal .mbtns{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+.modal .merr{color:var(--red);font-size:11.5px;min-height:16px;margin-top:2px}
+
+/* settings */
+.setrow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);gap:14px}
+.setrow:last-of-type{border-bottom:none}
+.setrow .sl{font-size:12.5px}
+.setrow .sd{font-size:10.5px;color:var(--ink-soft)}
+.seg{display:flex;border:1px solid var(--line-strong);border-radius:9px;overflow:hidden}
+.seg button{padding:6px 14px;background:transparent;border:none;font-size:11.5px;font-family:"Chakra Petch",sans-serif;font-weight:600;letter-spacing:.05em;color:var(--ink-soft)}
+.seg button.on{background:var(--cyan);color:var(--accent-ink)}
+.dots{display:flex;gap:8px}
+.dot{width:22px;height:22px;border-radius:50%;border:2px solid transparent;transition:.15s}
+.dot:hover{transform:scale(1.15)}
+.dot.on{border-color:var(--ink-strong);box-shadow:0 0 0 2px var(--panel-solid), 0 0 10px currentColor}
+.d-cyan{background:#38e1ff;color:#38e1ff}
+.d-emerald{background:#3ddc84;color:#3ddc84}
+.d-amber{background:#ffc24b;color:#ffc24b}
+.d-magenta{background:#ff5ce1;color:#ff5ce1}
+.d-violet{background:#9d7bff;color:#9d7bff}
+
+.toast{
+  position:fixed;bottom:26px;left:50%;transform:translate(-50%,20px);opacity:0;
+  background:var(--panel-solid);color:var(--ink-strong);border:1px solid var(--cyan);
+  padding:10px 22px;border-radius:10px;font-size:12.5px;letter-spacing:.03em;
+  transition:.25s;pointer-events:none;z-index:200;box-shadow:0 0 24px -6px var(--cyan);
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
