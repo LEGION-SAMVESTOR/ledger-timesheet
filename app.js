@@ -17,6 +17,7 @@ const DEFAULT_ENTRIES = [
   {project:"Upskilling",  task:""},
   {project:"Research",    task:""},
 ];
+const DEFAULT_ORDER = DEFAULT_ENTRIES.map(d=>d.project);
 const brandCls = v => (BRANDS.find(b=>b.v===v)||BRANDS[0]).cls;
 
 /* ---------- helpers ---------- */
@@ -101,14 +102,19 @@ function beep(){
 function remindPing(t){
   const label = (t.live && t.live.task) || t.project || t.task || "Timeblock";
   const mins = Math.round(hours(t.live.start, hhmmss(new Date()))*60);
-  const msg = `⏱ Still running: “${label}” — ${mins} min elapsed`;
-  toast(msg);
+  toast(`⏱ Still running: “${label}” — ${mins} min elapsed`);
   beep();
   if("Notification" in window && Notification.permission==="granted"){
-    try{ new Notification("LEDGER — timer still running", {body:`${label} · ${mins} min elapsed`, tag:"ledger-remind"}); }catch(e){}
+    try{
+      new Notification("LEDGER — timer still running", {
+        body:`${label} · ${mins} min elapsed`,
+        tag:"ledger-remind-"+label,
+        renotify:true,
+        requireInteraction:true
+      });
+    }catch(e){}
   }
-  const old = document.title;
-  document.title = "⏱ STILL RUNNING — " + old.replace(/^⏱ STILL RUNNING — /,"");
+  document.title = "⏱ STILL RUNNING — " + document.title.replace(/^⏱ STILL RUNNING — /,"");
   setTimeout(()=>{ document.title = document.title.replace(/^⏱ STILL RUNNING — /,""); }, 8000);
 }
 
@@ -145,6 +151,26 @@ function load(){
 const save = () => localStorage.setItem(dataKey(), JSON.stringify(store));
 const tasks = () => store.days[viewDay] || (store.days[viewDay]=[]);
 
+/* ---------- ordering (defaults first in fixed order, then Default-Task brand, then brands by hours) ---------- */
+function orderedIndices(list){
+  const bh = {};
+  list.forEach(t=>{ if(!t.isDefault) bh[t.brand]=(bh[t.brand]||0)+taskHours(t); });
+  return list.map((t,i)=>i).sort((a,b)=>{
+    const A=list[a], B=list[b];
+    if(!!A.isDefault !== !!B.isDefault) return A.isDefault?-1:1;
+    if(A.isDefault && B.isDefault){
+      const oa=DEFAULT_ORDER.indexOf(A.project), ob=DEFAULT_ORDER.indexOf(B.project);
+      return ((oa<0?99:oa)-(ob<0?99:ob)) || (a-b);
+    }
+    if(A.brand!==B.brand){
+      if(A.brand==="") return -1;
+      if(B.brand==="") return 1;
+      return ((bh[B.brand]||0)-(bh[A.brand]||0)) || A.brand.localeCompare(B.brand);
+    }
+    return a-b;
+  });
+}
+
 /* ---------- auth ---------- */
 $("loginForm").addEventListener("submit", async e=>{
   e.preventDefault();
@@ -175,6 +201,7 @@ function enter(name){
   viewDay = todayKey();
   buildBrandMenu();
   render();
+  if(settings.remind && "Notification" in window && Notification.permission==="default") Notification.requestPermission();
   setInterval(tick, 1000);
   tick();
 }
@@ -196,38 +223,108 @@ document.addEventListener("keydown", e=>{
   if(e.key==="Escape"){ $("brandDD").classList.remove("open"); closeBlock(); $("editOverlay").classList.remove("show"); $("setOverlay").classList.remove("show"); }
 });
 
+/* ---------- undo (20s window to resume a stopped task and run both) ---------- */
+let undo = null; // {items:[{idx, live, sess}], deadline, iv}
+function showUndo(items){
+  clearUndo(false);
+  undo = {items, deadline: Date.now()+20000};
+  const names = items.map(x=>{
+    const t = tasks()[x.idx];
+    return "“"+(x.live.task || t.project || t.task || "task")+"”";
+  }).join(", ");
+  $("undoText").textContent = `Stopped ${names}.`;
+  $("undoCount").textContent = "20";
+  $("undoBar").classList.add("show");
+  undo.iv = setInterval(()=>{
+    const left = Math.max(0, Math.ceil((undo.deadline-Date.now())/1000));
+    $("undoCount").textContent = String(left);
+    if(left<=0) clearUndo(false);
+  }, 250);
+}
+function clearUndo(){
+  if(undo){ clearInterval(undo.iv); undo=null; }
+  $("undoBar").classList.remove("show");
+}
+$("undoBtn").onclick = ()=>{
+  if(!undo) return;
+  const list = tasks();
+  undo.items.forEach(x=>{
+    const t = list[x.idx];
+    if(!t) return;
+    const k = t.sessions.indexOf(x.sess);
+    if(k>-1) t.sessions.splice(k,1);
+    t.live = x.live; // restore original start & reminder cadence
+  });
+  clearUndo();
+  save(); renderTable();
+  toast("Resumed — both timers running");
+};
+
 /* ---------- timeblock modal ---------- */
-let blockCtx = null; // {i, manual}
-function openBlock(i, manual){
+let blockCtx = null; // {i, mode:"start"|"manual"|"edit", sIdx}
+function openBlock(i, mode, sIdx){
   const t = tasks()[i];
-  blockCtx = {i, manual};
-  $("blockTitle").textContent = manual ? "Add timeblock" : "Start timeblock";
-  $("bOk").textContent = manual ? "Add" : "Start ▶";
-  const last = t.sessions[t.sessions.length-1];
-  $("bTask").value = last ? last.task : (t.task||"");
-  $("bTimes").style.display = manual ? "flex" : "none";
-  $("bRemindWrap").style.display = (!manual && settings.remind) ? "block" : "none";
+  blockCtx = {i, mode, sIdx};
+  const isEdit = mode==="edit";
+  const isManual = mode==="manual";
+  $("blockTitle").textContent = isEdit ? "Edit timeblock" : (isManual ? "Add timeblock" : "Start timeblock");
+  $("bOk").textContent = isEdit ? "Save" : (isManual ? "Add" : "Start ▶");
+  $("bDelete").style.display = isEdit ? "inline-block" : "none";
+  $("bTimes").style.display = (isManual||isEdit) ? "flex" : "none";
+  $("bRemindWrap").style.display = (mode==="start" && settings.remind) ? "block" : "none";
   $("bRemind").value = settings.remindMins;
-  $("bStart").value = ""; $("bEnd").value = ""; $("bErr").textContent="";
+  if(isEdit){
+    const s = t.sessions[sIdx];
+    $("bTask").value = s.task||"";
+    $("bStart").value = s.start; $("bEnd").value = s.end;
+  } else {
+    const last = t.sessions[t.sessions.length-1];
+    $("bTask").value = last ? last.task : (t.task||"");
+    $("bStart").value = ""; $("bEnd").value = "";
+  }
+  $("bErr").textContent="";
   $("blockOverlay").classList.add("show");
   setTimeout(()=>$("bTask").select(),30);
 }
 function closeBlock(){ $("blockOverlay").classList.remove("show"); blockCtx=null; }
 $("bCancel").onclick = closeBlock;
 $("blockOverlay").addEventListener("mousedown", e=>{ if(e.target===$("blockOverlay")) closeBlock(); });
+$("bDelete").onclick = ()=>{
+  if(!blockCtx || blockCtx.mode!=="edit") return;
+  if(!confirm("Delete this timeblock?")) return;
+  tasks()[blockCtx.i].sessions.splice(blockCtx.sIdx,1);
+  save(); closeBlock(); renderTable();
+};
 $("blockModal").addEventListener("submit", e=>{
   e.preventDefault();
   if(!blockCtx) return;
-  const t = tasks()[blockCtx.i];
+  const list = tasks();
+  const t = list[blockCtx.i];
   const label = $("bTask").value.trim();
-  if(blockCtx.manual){
+  if(blockCtx.mode==="manual" || blockCtx.mode==="edit"){
     const st=$("bStart").value, en=$("bEnd").value;
     if(!validT(st)||!validT(en)){ $("bErr").textContent="Times must be HH:MM (or HH:MM:SS)."; return; }
-    t.sessions.push({task:label, start:norm(st), end:norm(en)});
+    if(blockCtx.mode==="edit"){
+      const s = t.sessions[blockCtx.sIdx];
+      s.task=label; s.start=norm(st); s.end=norm(en);
+    } else {
+      t.sessions.push({task:label, start:norm(st), end:norm(en)});
+    }
   } else {
+    // stop any other running timers first, with a 20s resume window
+    const stopped = [];
+    list.forEach((o,j)=>{
+      if(j!==blockCtx.i && o.live){
+        const sess = {task:o.live.task, start:o.live.start, end:hhmmss(new Date())};
+        o.sessions.push(sess);
+        stopped.push({idx:j, live:o.live, sess});
+        o.live = null;
+      }
+    });
     const rm = settings.remind ? parseInt($("bRemind").value,10) : 0;
     t.live = {task:label, start:hhmmss(new Date()), remind:(rm>0?rm:null), nextRemind:(rm>0?rm:null)};
     if(rm>0 && "Notification" in window && Notification.permission==="default") Notification.requestPermission();
+    if(stopped.length) showUndo(stopped);
   }
   save(); closeBlock(); renderTable();
 });
@@ -285,10 +382,11 @@ function renderTable(){
   if(!list.length){
     body.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="disp">NO ENTRIES ${viewDay===todayKey()?"YET":"THIS DAY"}</div>Add one above${viewDay===todayKey()?" or hit ▶ to start a timeblock":""}.</div></td></tr>`;
   } else {
-    body.innerHTML = list.map((t,i)=>{
-      const editable = viewDay===todayKey();
-      const sess = t.sessions.map(s=>
-        `<div class="sess">${s.task?`<span class="slabel">${esc(s.task)}</span> · `:""}<span class="stime">${short(s.start)}–${short(s.end)} (${fmtH(hours(s.start,s.end))})</span></div>`).join("")
+    const editable = viewDay===todayKey();
+    body.innerHTML = orderedIndices(list).map(i=>{
+      const t = list[i];
+      const sess = t.sessions.map((s,k)=>
+        `<div class="sess ${editable?"clickable":""}" ${editable?`data-sedit="${i}:${k}" title="Click to edit"`:""}>${s.task?`<span class="slabel">${esc(s.task)}</span> · `:""}<span class="stime">${short(s.start)}–${short(s.end)} (${fmtH(hours(s.start,s.end))})</span></div>`).join("")
         + (t.live?`<div class="sess livesess">${t.live.task?esc(t.live.task)+" · ":""}${short(t.live.start)} – now…</div>`:"");
       const noBlocks = !t.sessions.length && !t.live;
       return `<tr data-i="${i}">
@@ -318,11 +416,15 @@ function renderTable(){
   $("statTasks").textContent = list.length;
 
   body.querySelectorAll("[data-st]").forEach(el=>el.onchange=()=>{ tasks()[+el.dataset.st].status=el.value; save(); renderTable(); });
-  body.querySelectorAll("[data-del]").forEach(el=>el.onclick=()=>{ if(confirm("Delete this entry?")){ tasks().splice(+el.dataset.del,1); save(); renderTable(); }});
-  body.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>openBlock(+el.dataset.go,false));
-  body.querySelectorAll("[data-sess]").forEach(el=>el.onclick=()=>openBlock(+el.dataset.sess,true));
+  body.querySelectorAll("[data-del]").forEach(el=>el.onclick=()=>{ if(confirm("Delete this entry?")){ tasks().splice(+el.dataset.del,1); clearUndo(); save(); renderTable(); }});
+  body.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>openBlock(+el.dataset.go,"start"));
+  body.querySelectorAll("[data-sess]").forEach(el=>el.onclick=()=>openBlock(+el.dataset.sess,"manual"));
   body.querySelectorAll("[data-edit]").forEach(el=>el.onclick=()=>openEdit(+el.dataset.edit));
   body.querySelectorAll("[data-eh]").forEach(el=>el.onclick=()=>openEdit(+el.dataset.eh));
+  body.querySelectorAll("[data-sedit]").forEach(el=>el.onclick=()=>{
+    const [i,k] = el.dataset.sedit.split(":").map(Number);
+    openBlock(i,"edit",k);
+  });
   body.querySelectorAll("[data-stop]").forEach(el=>el.onclick=()=>{
     const t=tasks()[+el.dataset.stop];
     t.sessions.push({task:t.live.task, start:t.live.start, end:hhmmss(new Date())});
@@ -368,24 +470,34 @@ $("addBtn").onclick = ()=>{
 ["fProject","fTask"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("addBtn").click();}}));
 
 /* ---------- copy for sheets ---------- */
+function exportHours(t){ // finished time only — a live timer isn't exported
+  const h = t.sessions.reduce((a,s)=>a+hours(s.start,s.end),0);
+  if(!t.sessions.length && t.manualHours!=null) return t.manualHours;
+  return h;
+}
 $("copyBtn").onclick = ()=>{
   const list = tasks();
-  if(!list.length){ toast("Nothing to copy"); return; }
   const rows=[];
-  for(const t of list){
-    if(t.sessions.length){
-      t.sessions.forEach((s,i)=>{
+  for(const i of orderedIndices(list)){
+    const t = list[i];
+    const total = exportHours(t);
+    if(total<=0) continue; // skip zero-hour entries
+    const brandName = t.brand || "Default Task";
+    if(t.isDefault || !t.sessions.length){
+      // final value only — one row
+      rows.push([brandName, t.project, t.task, "", "", fmtH(total), t.status].join("\t"));
+    } else {
+      t.sessions.forEach((s,k)=>{
         rows.push([
-          i===0 ? t.brand : "", i===0 ? t.project : "",
-          s.task || (i===0 ? t.task : ""),
+          k===0 ? brandName : "", k===0 ? t.project : "",
+          s.task || (k===0 ? t.task : ""),
           s.start, s.end, fmtH(hours(s.start,s.end)),
-          i===0 ? t.status : ""
+          k===0 ? t.status : ""
         ].join("\t"));
       });
-    } else {
-      rows.push([t.brand, t.project, t.task, "", "", fmtH(taskHours(t)), t.status].join("\t"));
     }
   }
+  if(!rows.length){ toast("Nothing to copy — no logged time yet"); return; }
   const tsv = rows.join("\n");
   navigator.clipboard.writeText(tsv).then(
     ()=>toast(`Copied ${rows.length} row${rows.length>1?"s":""} — paste into the sheet`),

@@ -92,6 +92,7 @@
     </div>
     <div class="merr" id="bErr"></div>
     <div class="mbtns">
+      <button type="button" class="btn small danger" id="bDelete" style="display:none;margin-right:auto">Delete block</button>
       <button type="button" class="btn small" id="bCancel">Cancel</button>
       <button type="submit" class="btn pri small" id="bOk">Start ▶</button>
     </div>
@@ -131,6 +132,7 @@
         <button type="button" class="dot d-amber" data-ac="amber" title="Amber"></button>
         <button type="button" class="dot d-magenta" data-ac="magenta" title="Magenta"></button>
         <button type="button" class="dot d-violet" data-ac="violet" title="Violet"></button>
+        <button type="button" class="dot d-crimson" data-ac="crimson" title="Crimson"></button>
       </div>
     </div>
     <div class="setrow">
@@ -174,6 +176,12 @@
       <button type="button" class="btn pri small" id="setClose">Done</button>
     </div>
   </div>
+</div>
+
+<div class="undobar" id="undoBar">
+  <span id="undoText"></span>
+  <button type="button" class="btn pri small" id="undoBtn">⟲ Resume — run both</button>
+  <span class="count" id="undoCount">20</span>
 </div>
 
 <div class="toast" id="toast"></div>

@@ -55,6 +55,8 @@
 [data-theme="light"][data-accent="magenta"]{--cyan:#b0189a;--cyan-dim:rgba(176,24,154,.10);--bg-glow1:rgba(176,24,154,.06)}
 [data-accent="violet"]{--cyan:#9d7bff;--cyan-dim:rgba(157,123,255,.13);--bg-glow1:rgba(157,123,255,.08)}
 [data-theme="light"][data-accent="violet"]{--cyan:#6a3fd8;--cyan-dim:rgba(106,63,216,.10);--bg-glow1:rgba(106,63,216,.06)}
+[data-accent="crimson"]{--cyan:#ff5c69;--cyan-dim:rgba(255,92,105,.13);--bg-glow1:rgba(255,92,105,.08)}
+[data-theme="light"][data-accent="crimson"]{--cyan:#c22736;--cyan-dim:rgba(194,39,54,.10);--bg-glow1:rgba(194,39,54,.06)}
 
 /* fonts & sizes */
 [data-font="sans"]{--font-body:"Chakra Petch",system-ui,sans-serif}
@@ -123,7 +125,7 @@ select option{background:var(--panel-solid);color:var(--ink)}
 .login-hint{font-size:11px;color:var(--ink-soft);margin-top:18px;border-top:1px dashed var(--line);padding-top:12px;line-height:1.7}
 
 /* ---------- shell ---------- */
-.app{max-width:1150px;margin:0 auto;padding:30px 22px 90px;display:none}
+.app{max-width:min(96vw,1640px);margin:0 auto;padding:30px 22px 90px;display:none}
 header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .mast h1{font-size:30px;font-weight:700;letter-spacing:.1em;color:var(--ink-strong);line-height:1.1}
 .mast h1 .tick{color:var(--cyan)}
@@ -246,6 +248,26 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 .d-amber{background:#ffc24b;color:#ffc24b}
 .d-magenta{background:#ff5ce1;color:#ff5ce1}
 .d-violet{background:#9d7bff;color:#9d7bff}
+.d-crimson{background:#ff5c69;color:#ff5c69}
+
+.btn.danger{border-color:var(--red);color:var(--red)}
+.btn.danger:hover{background:var(--red-bg);color:var(--red)}
+.sess.clickable{cursor:pointer;border-radius:6px}
+.sess.clickable:hover{color:var(--cyan)}
+.sess.clickable:hover .stime,.sess.clickable:hover .slabel{color:var(--cyan)}
+
+.undobar{
+  position:fixed;bottom:26px;left:50%;transform:translate(-50%,20px);opacity:0;pointer-events:none;
+  display:flex;align-items:center;gap:14px;z-index:190;
+  background:var(--panel-solid);border:1px solid var(--red);border-radius:12px;
+  padding:12px 18px;font-size:12.5px;box-shadow:0 0 30px -6px var(--red);
+  transition:.25s;max-width:min(92vw,640px);
+}
+.undobar.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.undobar .count{
+  font-family:"Chakra Petch",sans-serif;font-weight:700;font-size:15px;color:var(--red);
+  min-width:26px;text-align:center;font-variant-numeric:tabular-nums;
+}
 
 .toast{
   position:fixed;bottom:26px;left:50%;transform:translate(-50%,20px);opacity:0;
