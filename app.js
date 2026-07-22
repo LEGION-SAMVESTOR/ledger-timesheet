@@ -2,7 +2,10 @@
 const $ = id => document.getElementById(id);
 const LS_USERS = "ledger.users";
 const LS_SET = "ledger.settings";
-const STATUSES = {"Done":"st-done","In Progress":"st-progress","Paused":"st-paused","Preview Sent":"st-preview"};
+const STATUSES = {
+  "Done":"st-done","Pending":"st-pending","Preview Sent":"st-preview","Live":"st-live",
+  "Paused":"st-paused","Cancelled":"st-cancel","In Progress":"st-progress"
+};
 const BRANDS = [
   {v:"",    label:"Default Task", cls:"b-none"},
   {v:"KN",  label:"KN",  cls:"b-KN"},
@@ -55,7 +58,7 @@ async function hash(str){
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2600); }
 
 /* ---------- settings ---------- */
-const SET_DEFAULTS = {theme:"dark", accent:"cyan", font:"mono", fsize:"m", seed:true, remind:true, remindMins:30};
+const SET_DEFAULTS = {theme:"dark", accent:"cyan", font:"mono", fsize:"m", density:"comfy", seed:true, remind:true, remindMins:30};
 let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(LS_SET) || "{}"));
 function saveSettings(){ localStorage.setItem(LS_SET, JSON.stringify(settings)); applySettings(); }
 function applySettings(){
@@ -64,6 +67,8 @@ function applySettings(){
   de.dataset.accent = settings.accent;
   de.dataset.font = settings.font;
   de.dataset.fsize = settings.fsize;
+  de.dataset.density = settings.density;
+  $("densitySeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.dn===settings.density));
   $("themeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.th===settings.theme));
   $("fontSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.fn===settings.font));
   $("sizeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.fs===settings.fsize));
@@ -75,6 +80,7 @@ function applySettings(){
 $("themeSeg").addEventListener("click", e=>{ if(e.target.dataset.th){ settings.theme=e.target.dataset.th; saveSettings(); }});
 $("fontSeg").addEventListener("click", e=>{ if(e.target.dataset.fn){ settings.font=e.target.dataset.fn; saveSettings(); }});
 $("sizeSeg").addEventListener("click", e=>{ if(e.target.dataset.fs){ settings.fsize=e.target.dataset.fs; saveSettings(); }});
+$("densitySeg").addEventListener("click", e=>{ if(e.target.dataset.dn){ settings.density=e.target.dataset.dn; saveSettings(); }});
 $("accentDots").addEventListener("click", e=>{ const b=e.target.closest(".dot"); if(b){ settings.accent=b.dataset.ac; saveSettings(); }});
 $("seedSeg").addEventListener("click", e=>{ if(e.target.dataset.sd!==undefined){ settings.seed=e.target.dataset.sd==="1"; saveSettings(); }});
 $("remindSeg").addEventListener("click", e=>{
@@ -113,10 +119,10 @@ function remindPing(t){
   beep();
   if("Notification" in window && Notification.permission==="granted"){
     try{
+      // unique tag per ping — reusing one tag made browsers show it only once
       new Notification("LEDGER — timer still running", {
         body:`${label} · ${mins} min elapsed`,
-        tag:"ledger-remind-"+label,
-        renotify:true,
+        tag:"ledger-remind-"+label+"-"+Date.now(),
         requireInteraction:true
       });
     }catch(e){}
@@ -226,7 +232,7 @@ function buildBrandMenu(){
 $("brandBtn").onclick = e=>{ e.stopPropagation(); $("brandDD").classList.toggle("open"); };
 document.addEventListener("click", e=>{ if(!$("brandDD").contains(e.target)) $("brandDD").classList.remove("open"); });
 document.addEventListener("keydown", e=>{
-  if(e.key==="Escape"){ $("brandDD").classList.remove("open"); closeBlock(); $("editOverlay").classList.remove("show"); $("setOverlay").classList.remove("show"); }
+  if(e.key==="Escape"){ $("brandDD").classList.remove("open"); closeBlock(); $("editOverlay").classList.remove("show"); $("setOverlay").classList.remove("show"); $("prevOverlay").classList.remove("show"); }
 });
 
 /* ---------- undo (20s window to resume a stopped task and run both) ---------- */
@@ -399,7 +405,7 @@ function renderTable(){
         <td><span class="bpill ${brandCls(t.brand)}">${t.brand?esc(t.brand):"Default Task"}</span></td>
         <td class="projcell">${esc(t.project)}</td>
         <td class="taskdesc">${esc(t.task)||'<span style="opacity:.4">—</span>'}</td>
-        <td>${sess||`<span style="color:var(--ink-soft);opacity:.5">—</span>`}</td>
+        <td class="tbcell">${t.live?`<span class="livehint">● REC</span>`:""}${sess||`<span style="color:var(--ink-soft);opacity:.5">—</span>`}</td>
         <td class="num ${noBlocks&&editable?"editable":""}" ${noBlocks&&editable?`data-eh="${i}" title="Click to set hours"`:""} data-hours="${i}"><strong>${fmtH(taskHours(t))}</strong></td>
         <td><select class="status-sel ${STATUSES[t.status]||""}" data-st="${i}" ${editable?"":"disabled"}>
           ${Object.keys(STATUSES).map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}
@@ -481,7 +487,7 @@ function exportHours(t){ // finished time only — a live timer isn't exported
   if(!t.sessions.length && t.manualHours!=null) return t.manualHours;
   return h;
 }
-$("copyBtn").onclick = ()=>{
+function buildRows(){
   const list = tasks();
   const rows=[];
   for(const i of orderedIndices(list)){
@@ -492,7 +498,7 @@ $("copyBtn").onclick = ()=>{
     if(isDefaultEntry(t) || !t.sessions.length){
       // final value only — one row
       const desc = t.task || (t.sessions[0] && t.sessions[0].task) || "";
-      rows.push([brandName, t.project, desc, "", "", fmtH(total), t.status].join("\t"));
+      rows.push([brandName, t.project, desc, "", "", fmtH(total), t.status]);
     } else {
       t.sessions.forEach((s,k)=>{
         rows.push([
@@ -500,19 +506,39 @@ $("copyBtn").onclick = ()=>{
           s.task || (k===0 ? t.task : ""),
           s.start, s.end, fmtH(hours(s.start,s.end)),
           k===0 ? t.status : ""
-        ].join("\t"));
+        ]);
       });
     }
   }
+  return rows;
+}
+function copyRows(){
+  const rows = buildRows();
   if(!rows.length){ toast("Nothing to copy — no logged time yet"); return; }
-  const tsv = rows.join("\n");
+  const tsv = rows.map(r=>r.join("\t")).join("\n");
   navigator.clipboard.writeText(tsv).then(
-    ()=>toast(`Copied ${rows.length} row${rows.length>1?"s":""} — paste into the sheet`),
+    ()=>toast(`Copied ${rows.length} row${rows.length>1?"s":""} — paste with Ctrl+Shift+V to keep the sheet's dropdowns`),
     ()=>{
       const ta=document.createElement("textarea"); ta.value=tsv; document.body.appendChild(ta);
-      ta.select(); document.execCommand("copy"); ta.remove(); toast("Copied");
+      ta.select(); document.execCommand("copy"); ta.remove(); toast("Copied — paste with Ctrl+Shift+V");
     });
+}
+$("copyBtn").onclick = copyRows;
+
+/* ---------- export preview ---------- */
+$("previewBtn").onclick = ()=>{
+  const rows = buildRows();
+  const head = ["Brand","Project","Task","Start","End","Hours","Status"];
+  $("prevTable").innerHTML =
+    "<tr>"+head.map(h=>`<th>${h}</th>`).join("")+"</tr>" +
+    (rows.length
+      ? rows.map(r=>"<tr>"+r.map(c=>`<td>${esc(c)||""}</td>`).join("")+"</tr>").join("")
+      : `<tr><td colspan="7" style="color:var(--ink-soft)">Nothing to export yet — no logged time.</td></tr>`);
+  $("prevOverlay").classList.add("show");
 };
+$("prevClose").onclick = ()=>$("prevOverlay").classList.remove("show");
+$("prevCopy").onclick = ()=>{ copyRows(); $("prevOverlay").classList.remove("show"); };
+$("prevOverlay").addEventListener("mousedown", e=>{ if(e.target===$("prevOverlay")) $("prevOverlay").classList.remove("show"); });
 
 /* ---------- boot ---------- */
 const sessName = sessionStorage.getItem("ledger.session");
