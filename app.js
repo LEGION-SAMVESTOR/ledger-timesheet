@@ -398,7 +398,7 @@ function renderTable(){
     body.innerHTML = orderedIndices(list).map(i=>{
       const t = list[i];
       const sess = t.sessions.map((s,k)=>
-        `<div class="sess ${editable?"clickable":""}" ${editable?`data-sedit="${i}:${k}" title="Click to edit"`:""}>${s.task?`<span class="slabel">${esc(s.task)}</span> · `:""}<span class="stime">${short(s.start)}–${short(s.end)} (${fmtH(hours(s.start,s.end))})</span></div>`).join("")
+        `<div class="sess ${editable?"clickable":""}" ${editable?`data-sedit="${i}:${k}" title="Click to edit"`:""}>${s.task?`<span class="slabel">${esc(s.task)}</span> · `:""}<span class="stime">${short(s.start)}–${short(s.end)} · ${Math.round(hours(s.start,s.end)*60)}m (${fmtH(hours(s.start,s.end))})</span></div>`).join("")
         + (t.live?`<div class="sess livesess">${t.live.task?esc(t.live.task)+" · ":""}${short(t.live.start)} – now…</div>`:"");
       const noBlocks = !t.sessions.length && !t.live;
       return `<tr data-i="${i}">
@@ -463,11 +463,61 @@ function tick(){
     }
   });
   if(dirty) save();
+  if(pipWin) renderPip();
   if(list.some(t=>t.live)){
     const total = fmtH(list.reduce((a,t)=>a+taskHours(t),0));
     $("dayTotal").textContent = total;
     $("statHours").textContent = total;
   }
+}
+
+/* ---------- pinned floating timer (Document Picture-in-Picture) ---------- */
+let pipWin = null;
+$("pinBtn").onclick = async ()=>{
+  if(pipWin){ try{ pipWin.close(); }catch(e){} pipWin=null; return; }
+  if(!("documentPictureInPicture" in window)){
+    toast("Pinned popup needs Chrome or Edge (Document Picture-in-Picture)");
+    return;
+  }
+  try{
+    pipWin = await documentPictureInPicture.requestWindow({width:300, height:200});
+  }catch(e){ toast("Could not open pinned popup"); return; }
+  const d = pipWin.document;
+  d.title = "LEDGER timer";
+  d.body.style.cssText = "margin:0;background:#0a0f16;color:#dbe7f0;font-family:ui-monospace,Consolas,monospace;font-size:13px";
+  d.body.innerHTML = '<div id="pipRoot" style="padding:14px"></div>';
+  pipWin.addEventListener("pagehide", ()=>{ pipWin=null; });
+  _lastPipHtml = "";
+  renderPip();
+};
+let _lastPipHtml = "";
+function renderPip(){
+  if(!pipWin) return;
+  const root = pipWin.document.getElementById("pipRoot");
+  if(!root) return;
+  const list = store ? (store.days[todayKey()]||[]) : [];
+  const lives = list.map((t,i)=>({t,i})).filter(x=>x.t.live);
+  const html = (lives.length ? lives.map(x=>{
+    const mins = Math.round(hours(x.t.live.start, hhmmss(new Date()))*60);
+    return `<div style="margin-bottom:12px;border-bottom:1px solid rgba(120,160,190,.15);padding-bottom:10px">
+      <div style="font-weight:600;color:#f2f8fc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.t.live.task||x.t.project||"Task")}</div>
+      <div style="color:#6d7f8f;font-size:11px;margin:2px 0 4px">${esc(x.t.project||"")} · started ${x.t.live.start.slice(0,5)}</div>
+      <div style="font-size:22px;color:#38e1ff;font-weight:700">${mins}m <span style="font-size:11px;color:#6d7f8f;font-weight:400">= ${fmtH(mins/60)} h</span></div>
+      <button data-pstop="${x.i}" style="margin-top:6px;background:#ff5c69;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font:inherit;font-size:12px">■ stop</button>
+    </div>`;
+  }).join("") : '<div style="color:#6d7f8f;padding:6px 0">No timer running</div>');
+  if(html === _lastPipHtml) return; // avoid rebuilding every second — only when minutes change
+  _lastPipHtml = html;
+  root.innerHTML = html;
+  root.querySelectorAll("[data-pstop]").forEach(b=>b.onclick=()=>{
+    const t = (store.days[todayKey()]||[])[+b.dataset.pstop];
+    if(t && t.live){
+      t.sessions.push({task:t.live.task, start:t.live.start, end:hhmmss(new Date())});
+      t.live=null; save();
+      if(viewDay===todayKey()) renderTable();
+      renderPip();
+    }
+  });
 }
 
 /* ---------- add entry ---------- */

@@ -281,7 +281,10 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 .modal .merr{color:var(--red);font-size:11.5px;min-height:16px;margin-top:2px}
 
 /* settings */
-.setrow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);gap:14px}
+.setrow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);gap:10px;flex-wrap:wrap}
+.setrow>div:first-child{flex:1 1 150px;min-width:130px}
+.seg{flex:0 0 auto}
+.seg button{white-space:nowrap}
 .setrow:last-of-type{border-bottom:none}
 .setrow .sl{font-size:12.5px}
 .setrow .sd{font-size:10.5px;color:var(--ink-soft)}
@@ -312,8 +315,8 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
   box-shadow:0 16px 40px -10px rgba(0,0,0,.65), 0 0 0 1px var(--line);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-[data-density="hover"] tbody .rowbtns{visibility:hidden}
-[data-density="hover"] tbody tr:hover .rowbtns{visibility:visible}
+[data-density="hover"] .sheet th:nth-child(3),
+[data-density="hover"] .sheet td:nth-child(3){display:none}
 [data-density="hover"] tbody .tbcell .livehint{display:inline}
 .livehint{display:none;color:var(--red);font-size:11px;font-weight:600;animation:pulse 1.15s infinite;margin-right:8px}
 
