@@ -279,13 +279,16 @@ function openBlock(i, mode, sIdx){
   blockCtx = {i, mode, sIdx};
   const isEdit = mode==="edit";
   const isManual = mode==="manual";
-  $("blockTitle").textContent = isEdit ? "Edit timeblock" : (isManual ? "Add timeblock" : "Start timeblock");
-  $("bOk").textContent = isEdit ? "Save" : (isManual ? "Add" : "Start ▶");
+  const isRename = mode==="rename";
+  $("blockTitle").textContent = isRename ? "Rename running task" : (isEdit ? "Edit timeblock" : (isManual ? "Add timeblock" : "Start timeblock"));
+  $("bOk").textContent = (isEdit||isRename) ? "Save" : (isManual ? "Add" : "Start ▶");
   $("bDelete").style.display = isEdit ? "inline-block" : "none";
   $("bTimes").style.display = (isManual||isEdit) ? "flex" : "none";
   $("bRemindWrap").style.display = (mode==="start" && settings.remind) ? "block" : "none";
   $("bRemind").value = settings.remindMins;
-  if(isEdit){
+  if(isRename){
+    $("bTask").value = (t.live && t.live.task) || "";
+  } else if(isEdit){
     const s = t.sessions[sIdx];
     $("bTask").value = s.task||"";
     $("bStart").value = s.start; $("bEnd").value = s.end;
@@ -313,7 +316,9 @@ $("blockModal").addEventListener("submit", e=>{
   const list = tasks();
   const t = list[blockCtx.i];
   const label = $("bTask").value.trim();
-  if(blockCtx.mode==="manual" || blockCtx.mode==="edit"){
+  if(blockCtx.mode==="rename"){
+    if(t.live) t.live.task = label;
+  } else if(blockCtx.mode==="manual" || blockCtx.mode==="edit"){
     const st=$("bStart").value, en=$("bEnd").value;
     if(!validT(st)||!validT(en)){ $("bErr").textContent="Times must be HH:MM (or HH:MM:SS)."; return; }
     if(blockCtx.mode==="edit"){
@@ -334,7 +339,17 @@ $("blockModal").addEventListener("submit", e=>{
       }
     });
     const rm = settings.remind ? parseInt($("bRemind").value,10) : 0;
-    t.live = {task:label, start:hhmmss(new Date()), remind:(rm>0?rm:null), nextRemind:(rm>0?rm:null)};
+    // restarted within 20s of the last stop → no gap: continue from where it ended
+    let startAt = hhmmss(new Date());
+    const prev = t.sessions[t.sessions.length-1];
+    if(prev){
+      const gap = toSec(startAt) - toSec(prev.end);
+      if(gap>=0 && gap<=20){
+        if((prev.task||"")===label){ t.sessions.pop(); startAt = prev.start; } // same task → merge into one block
+        else startAt = prev.end; // different task → butt the blocks together
+      }
+    }
+    t.live = {task:label, start:startAt, remind:(rm>0?rm:null), nextRemind:(rm>0?rm:null)};
     if(rm>0 && "Notification" in window && Notification.permission==="default") Notification.requestPermission();
     if(stopped.length) showUndo(stopped);
   }
@@ -346,6 +361,8 @@ let editIdx = null;
 function openEdit(i){
   const t = tasks()[i];
   editIdx = i;
+  $("eBrand").innerHTML = BRANDS.map(b=>`<option value="${b.v}" ${b.v===t.brand?"selected":""}>${b.label}</option>`).join("");
+  $("eProject").value = t.project||"";
   $("eTask").value = t.task||"";
   $("eHours").value = t.manualHours!=null ? String(t.manualHours) : "";
   $("eErr").textContent="";
@@ -360,6 +377,8 @@ $("editModal").addEventListener("submit", e=>{
   const t = tasks()[editIdx];
   const hv = $("eHours").value.trim();
   if(hv && isNaN(parseFloat(hv))){ $("eErr").textContent="Hours must be a number, e.g. 0.5"; return; }
+  t.brand = $("eBrand").value;
+  t.project = $("eProject").value.trim();
   t.task = $("eTask").value.trim();
   t.manualHours = hv ? Math.round(parseFloat(hv)*100)/100 : null;
   save(); $("editOverlay").classList.remove("show"); renderTable();
@@ -399,7 +418,7 @@ function renderTable(){
       const t = list[i];
       const sess = t.sessions.map((s,k)=>
         `<div class="sess ${editable?"clickable":""}" ${editable?`data-sedit="${i}:${k}" title="Click to edit"`:""}>${s.task?`<span class="slabel">${esc(s.task)}</span> · `:""}<span class="stime">${short(s.start)}–${short(s.end)} · ${Math.round(hours(s.start,s.end)*60)}m (${fmtH(hours(s.start,s.end))})</span></div>`).join("")
-        + (t.live?`<div class="sess livesess">${t.live.task?esc(t.live.task)+" · ":""}${short(t.live.start)} – now…</div>`:"");
+        + (t.live?`<div class="sess livesess ${editable?"clickable":""}" ${editable?`data-ledit="${i}" title="Click to rename"`:""}>${t.live.task?esc(t.live.task)+" · ":""}${short(t.live.start)} – now…</div>`:"");
       const noBlocks = !t.sessions.length && !t.live;
       return `<tr data-i="${i}">
         <td><span class="bpill ${brandCls(t.brand)}">${t.brand?esc(t.brand):"Default Task"}</span></td>
@@ -427,12 +446,22 @@ function renderTable(){
   $("statHours").textContent = fmtH(total);
   $("statTasks").textContent = list.length;
 
-  body.querySelectorAll("[data-st]").forEach(el=>el.onchange=()=>{ tasks()[+el.dataset.st].status=el.value; save(); renderTable(); });
+  body.querySelectorAll("[data-st]").forEach(el=>el.onchange=()=>{
+    const t = tasks()[+el.dataset.st];
+    t.status = el.value;
+    if(el.value==="Done" && t.live){ // Done auto-stops the timer (can be restarted)
+      t.sessions.push({task:t.live.task, start:t.live.start, end:hhmmss(new Date())});
+      t.live=null;
+      toast("Timer stopped — marked Done");
+    }
+    save(); renderTable();
+  });
   body.querySelectorAll("[data-del]").forEach(el=>el.onclick=()=>{ if(confirm("Delete this entry?")){ tasks().splice(+el.dataset.del,1); clearUndo(); save(); renderTable(); }});
   body.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>openBlock(+el.dataset.go,"start"));
   body.querySelectorAll("[data-sess]").forEach(el=>el.onclick=()=>openBlock(+el.dataset.sess,"manual"));
   body.querySelectorAll("[data-edit]").forEach(el=>el.onclick=()=>openEdit(+el.dataset.edit));
   body.querySelectorAll("[data-eh]").forEach(el=>el.onclick=()=>openEdit(+el.dataset.eh));
+  body.querySelectorAll("[data-ledit]").forEach(el=>el.onclick=()=>openBlock(+el.dataset.ledit,"rename"));
   body.querySelectorAll("[data-sedit]").forEach(el=>el.onclick=()=>{
     const [i,k] = el.dataset.sedit.split(":").map(Number);
     openBlock(i,"edit",k);
@@ -484,8 +513,25 @@ $("pinBtn").onclick = async ()=>{
   }catch(e){ toast("Could not open pinned popup"); return; }
   const d = pipWin.document;
   d.title = "LEDGER timer";
-  d.body.style.cssText = "margin:0;background:#0a0f16;color:#dbe7f0;font-family:ui-monospace,Consolas,monospace;font-size:13px";
-  d.body.innerHTML = '<div id="pipRoot" style="padding:14px"></div>';
+  const st = d.createElement("style");
+  st.textContent = `
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#070b10;color:#dbe7f0;font-family:ui-monospace,Consolas,monospace;font-size:12px;padding:10px;
+      background-image:linear-gradient(rgba(120,180,220,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(120,180,220,.05) 1px,transparent 1px);
+      background-size:28px 28px}
+    .card{background:rgba(16,22,30,.92);border:1px solid rgba(120,180,220,.22);border-radius:12px;padding:12px 14px;margin-bottom:8px;position:relative;overflow:hidden}
+    .card::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,transparent,#38e1ff,transparent)}
+    .task{font-weight:600;color:#f2f8fc;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .meta{color:#6d7f8f;font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin:3px 0 8px}
+    .row{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+    .time{font-size:26px;font-weight:700;color:#38e1ff;line-height:1}
+    .time small{font-size:10px;color:#6d7f8f;font-weight:400;margin-left:4px}
+    .stop{background:transparent;border:1px solid #ff5c69;color:#ff5c69;border-radius:8px;padding:5px 14px;cursor:pointer;font:inherit;font-size:11px;font-weight:600;letter-spacing:.05em}
+    .stop:hover{background:#ff5c69;color:#fff}
+    .none{color:#6d7f8f;text-align:center;padding:22px 0;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+  `;
+  d.head.appendChild(st);
+  d.body.innerHTML = '<div id="pipRoot"></div>';
   pipWin.addEventListener("pagehide", ()=>{ pipWin=null; });
   _lastPipHtml = "";
   renderPip();
@@ -499,13 +545,15 @@ function renderPip(){
   const lives = list.map((t,i)=>({t,i})).filter(x=>x.t.live);
   const html = (lives.length ? lives.map(x=>{
     const mins = Math.round(hours(x.t.live.start, hhmmss(new Date()))*60);
-    return `<div style="margin-bottom:12px;border-bottom:1px solid rgba(120,160,190,.15);padding-bottom:10px">
-      <div style="font-weight:600;color:#f2f8fc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.t.live.task||x.t.project||"Task")}</div>
-      <div style="color:#6d7f8f;font-size:11px;margin:2px 0 4px">${esc(x.t.project||"")} · started ${x.t.live.start.slice(0,5)}</div>
-      <div style="font-size:22px;color:#38e1ff;font-weight:700">${mins}m <span style="font-size:11px;color:#6d7f8f;font-weight:400">= ${fmtH(mins/60)} h</span></div>
-      <button data-pstop="${x.i}" style="margin-top:6px;background:#ff5c69;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font:inherit;font-size:12px">■ stop</button>
+    return `<div class="card">
+      <div class="task">${esc(x.t.live.task||x.t.project||"Task")}</div>
+      <div class="meta">${esc(x.t.project||"—")} · from ${x.t.live.start.slice(0,5)}</div>
+      <div class="row">
+        <div class="time">${mins}m<small>= ${fmtH(mins/60)} h</small></div>
+        <button class="stop" data-pstop="${x.i}">■ STOP</button>
+      </div>
     </div>`;
-  }).join("") : '<div style="color:#6d7f8f;padding:6px 0">No timer running</div>');
+  }).join("") : '<div class="none">No timer running</div>');
   if(html === _lastPipHtml) return; // avoid rebuilding every second — only when minutes change
   _lastPipHtml = html;
   root.innerHTML = html;
@@ -524,12 +572,11 @@ function renderPip(){
 $("addBtn").onclick = ()=>{
   if(viewDay!==todayKey()){ toast("Switch to Today to add entries"); return; }
   const project=$("fProject").value.trim();
-  const task=$("fTask").value.trim();
-  if(!project && !task){ $("fProject").focus(); return; }
-  tasks().push(newEntry({brand:curBrand, project, task, status:$("fStatus").value}));
-  $("fProject").value=""; $("fTask").value=""; save(); render();
+  if(!project){ $("fProject").focus(); return; }
+  tasks().push(newEntry({brand:curBrand, project, task:"", status:$("fStatus").value}));
+  $("fProject").value=""; save(); render();
 };
-["fProject","fTask"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("addBtn").click();}}));
+$("fProject").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("addBtn").click();}});
 
 /* ---------- copy for sheets ---------- */
 function exportHours(t){ // finished time only — a live timer isn't exported

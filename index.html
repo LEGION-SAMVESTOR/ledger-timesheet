@@ -60,7 +60,6 @@
         </div>
       </div>
       <div class="field"><label>Project</label><input id="fProject" list="projectList" placeholder="Review Section"><datalist id="projectList"></datalist></div>
-      <div class="field"><label>Task / notes</label><input id="fTask" placeholder="What is this project about…"></div>
       <div class="field"><label>Status</label>
         <select id="fStatus">
           <option>Done</option><option>Pending</option><option>Preview Sent</option><option>Live</option>
@@ -116,6 +115,10 @@
 <div class="overlay" id="editOverlay">
   <form class="modal" id="editModal">
     <h3>Edit entry</h3>
+    <div class="mrow">
+      <div class="field"><label>Brand</label><select id="eBrand"></select></div>
+      <div class="field"><label>Project</label><input id="eProject"></div>
+    </div>
     <div class="field"><label>Task / notes</label><input id="eTask"></div>
     <div class="field"><label>Hours (used when no timeblocks logged)</label><input id="eHours" inputmode="decimal" placeholder="0.50"></div>
     <div class="merr" id="eErr"></div>

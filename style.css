@@ -195,7 +195,7 @@ header.top .spacer{flex:1}
 .panel{background:var(--panel);backdrop-filter:blur(14px);border-radius:var(--radius);box-shadow:var(--shadow)}
 
 /* ---------- add form ---------- */
-.addbar{display:grid;grid-template-columns:150px 1fr 1.4fr 145px auto;gap:12px;padding:18px 16px;align-items:end;border-bottom:1px solid var(--line-strong)}
+.addbar{display:grid;grid-template-columns:170px 1fr 170px auto;gap:12px;padding:18px 16px;align-items:end;border-bottom:1px solid var(--line-strong)}
 .addbar .field{margin:0}
 @media(max-width:880px){.addbar{grid-template-columns:1fr 1fr}}
 
