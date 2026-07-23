@@ -80,7 +80,7 @@ function applySettings(){
 $("themeSeg").addEventListener("click", e=>{ if(e.target.dataset.th){ settings.theme=e.target.dataset.th; saveSettings(); }});
 $("fontSeg").addEventListener("click", e=>{ if(e.target.dataset.fn){ settings.font=e.target.dataset.fn; saveSettings(); }});
 $("sizeSeg").addEventListener("click", e=>{ if(e.target.dataset.fs){ settings.fsize=e.target.dataset.fs; saveSettings(); }});
-$("densitySeg").addEventListener("click", e=>{ if(e.target.dataset.dn){ settings.density=e.target.dataset.dn; saveSettings(); }});
+$("densitySeg").addEventListener("click", e=>{ if(e.target.dataset.dn){ settings.density=e.target.dataset.dn; saveSettings(); if(store) renderTable(); }});
 $("accentDots").addEventListener("click", e=>{ const b=e.target.closest(".dot"); if(b){ settings.accent=b.dataset.ac; saveSettings(); }});
 $("seedSeg").addEventListener("click", e=>{ if(e.target.dataset.sd!==undefined){ settings.seed=e.target.dataset.sd==="1"; saveSettings(); }});
 $("remindSeg").addEventListener("click", e=>{
@@ -471,7 +471,47 @@ function renderTable(){
     t.sessions.push({task:t.live.task, start:t.live.start, end:hhmmss(new Date())});
     t.live=null; save(); renderTable();
   });
+  hideHoverCard();
+  if(settings.density==="hover"){
+    body.querySelectorAll("tr[data-i]").forEach(tr=>{
+      tr.addEventListener("mouseenter", ()=>showHoverCard(tr));
+      tr.addEventListener("mouseleave", scheduleHideHoverCard);
+    });
+  }
 }
+
+/* ---------- floating hover card (hover density) ---------- */
+let _hcTimer = null;
+function showHoverCard(tr){
+  clearTimeout(_hcTimer);
+  const i = +tr.dataset.i;
+  const t = tasks()[i];
+  if(!t) return;
+  const editable = viewDay===todayKey();
+  const card = $("hoverCard");
+  const sess = t.sessions.map((s,k)=>
+    `<div class="sess ${editable?"clickable":""}" ${editable?`data-hsedit="${i}:${k}" title="Click to edit"`:""}>${s.task?`<span class="slabel">${esc(s.task)}</span> · `:""}<span class="stime">${short(s.start)}–${short(s.end)} · ${Math.round(hours(s.start,s.end)*60)}m (${fmtH(hours(s.start,s.end))})</span></div>`).join("")
+    + (t.live?`<div class="sess livesess ${editable?"clickable":""}" ${editable?`data-hledit="${i}" title="Click to rename"`:""}>${t.live.task?esc(t.live.task)+" · ":""}${short(t.live.start)} – now… · ${Math.round(hours(t.live.start,hhmmss(new Date()))*60)}m</div>`:"");
+  card.innerHTML = `<div class="hc-title">${esc(t.project||"Timeblocks")}</div>` +
+    (sess || `<div class="sess" style="color:var(--ink-soft)">No timeblocks yet</div>`);
+  card.classList.add("show");
+  const rect = tr.getBoundingClientRect();
+  const cw = card.offsetWidth, ch = card.offsetHeight;
+  let top = rect.bottom + 6;
+  if(top + ch > window.innerHeight - 10) top = rect.top - ch - 6;
+  let left = Math.min(Math.max(rect.left + 120, 8), window.innerWidth - cw - 8);
+  card.style.top = top+"px"; card.style.left = left+"px";
+  card.querySelectorAll("[data-hsedit]").forEach(el=>el.onclick=()=>{
+    const [a,b]=el.dataset.hsedit.split(":").map(Number); hideHoverCard(); openBlock(a,"edit",b);
+  });
+  card.querySelectorAll("[data-hledit]").forEach(el=>el.onclick=()=>{ hideHoverCard(); openBlock(+el.dataset.hledit,"rename"); });
+}
+function scheduleHideHoverCard(){ clearTimeout(_hcTimer); _hcTimer=setTimeout(hideHoverCard, 220); }
+function hideHoverCard(){ clearTimeout(_hcTimer); $("hoverCard").classList.remove("show"); }
+$("hoverCard").addEventListener("mouseenter", ()=>clearTimeout(_hcTimer));
+$("hoverCard").addEventListener("mouseleave", scheduleHideHoverCard);
+window.addEventListener("scroll", hideHoverCard, {passive:true});
+window.addEventListener("resize", hideHoverCard)
 
 function tick(){
   $("statClock").textContent = new Date().toTimeString().slice(0,5);
@@ -641,5 +681,29 @@ $("prevOverlay").addEventListener("mousedown", e=>{ if(e.target===$("prevOverlay
 /* ---------- boot ---------- */
 const sessName = sessionStorage.getItem("ledger.session");
 if(sessName) enter(sessName);
-setTimeout(()=>{ $("boot").classList.add("hide"); }, 900);
-setTimeout(()=>{ const b=$("boot"); if(b) b.remove(); }, 1600);
+(function bootSequence(){
+  const LINES = [
+    ["> mounting /ledger/core", "OK"],
+    ["> loading timeblocks.db", "OK"],
+    ["> linking sheets.exporter", "OK"],
+    ["> auth.vault :: local", "OK"],
+    ["> ui.render_engine", "READY"],
+  ];
+  const term = $("bootTerm"), fill = $("bootFill");
+  let i = 0;
+  function step(){
+    if(i < LINES.length){
+      const [txt, res] = LINES[i];
+      term.innerHTML = term.innerHTML.replace(/<span class="cursor"><\/span>$/,"") +
+        esc(txt).padEnd(34,".").replace(/\./g,'<span style="opacity:.35">.</span>') +
+        ` <span class="${res==="OK"?"ok":"val"}">[${res}]</span>\n<span class="cursor"></span>`;
+      i++;
+      fill.style.width = Math.round(i/LINES.length*100) + "%";
+      setTimeout(step, 110 + Math.random()*130);
+    } else {
+      setTimeout(()=>{ $("boot").classList.add("hide"); }, 260);
+      setTimeout(()=>{ const b=$("boot"); if(b) b.remove(); }, 900);
+    }
+  }
+  step();
+})();
