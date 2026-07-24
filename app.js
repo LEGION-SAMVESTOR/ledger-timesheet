@@ -58,7 +58,7 @@ async function hash(str){
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2600); }
 
 /* ---------- settings ---------- */
-const SET_DEFAULTS = {theme:"dark", accent:"cyan", font:"mono", fsize:"m", density:"comfy", seed:true, remind:true, remindMins:30};
+const SET_DEFAULTS = {theme:"dark", accent:"cyan", font:"mono", fsize:"m", density:"comfy", seed:true, remind:true, remindMins:30, target:8};
 let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(LS_SET) || "{}"));
 function saveSettings(){ localStorage.setItem(LS_SET, JSON.stringify(settings)); applySettings(); }
 function applySettings(){
@@ -76,7 +76,12 @@ function applySettings(){
   $("seedSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.sd==="1")===!!settings.seed));
   $("remindSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.rm==="1")===!!settings.remind));
   if(document.activeElement!==$("remindMins")) $("remindMins").value = settings.remindMins;
+  if(document.activeElement!==$("targetHrs")) $("targetHrs").value = settings.target;
 }
+$("targetHrs") && $("targetHrs").addEventListener("change", ()=>{
+  const v = parseFloat($("targetHrs").value);
+  if(v>0){ settings.target=v; saveSettings(); if(store) renderTable(); } else applySettings();
+});
 $("themeSeg").addEventListener("click", e=>{ if(e.target.dataset.th){ settings.theme=e.target.dataset.th; saveSettings(); }});
 $("fontSeg").addEventListener("click", e=>{ if(e.target.dataset.fn){ settings.font=e.target.dataset.fn; saveSettings(); }});
 $("sizeSeg").addEventListener("click", e=>{ if(e.target.dataset.fs){ settings.fsize=e.target.dataset.fs; saveSettings(); }});
@@ -410,22 +415,26 @@ function taskHours(t){
 function renderTable(){
   const list = tasks();
   const body = $("taskBody");
+  const dayTotal = list.reduce((a,t)=>a+taskHours(t),0);
   if(!list.length){
-    body.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="disp">NO ENTRIES ${viewDay===todayKey()?"YET":"THIS DAY"}</div>Add one above${viewDay===todayKey()?" or hit ▶ to start a timeblock":""}.</div></td></tr>`;
+    body.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="disp">NO ENTRIES ${viewDay===todayKey()?"YET":"THIS DAY"}</div>Add one above${viewDay===todayKey()?" or hit ▶ to start a timeblock":""}.</div></td></tr>`;
   } else {
     const editable = viewDay===todayKey();
     body.innerHTML = orderedIndices(list).map(i=>{
       const t = list[i];
-      const sess = t.sessions.map((s,k)=>
-        `<div class="sess ${editable?"clickable":""}" ${editable?`data-sedit="${i}:${k}" title="Click to edit"`:""}>${s.task?`<span class="slabel">${esc(s.task)}</span> · `:""}<span class="stime">${short(s.start)}–${short(s.end)} · ${Math.round(hours(s.start,s.end)*60)}m (${fmtH(hours(s.start,s.end))})</span></div>`).join("")
-        + (t.live?`<div class="sess livesess ${editable?"clickable":""}" ${editable?`data-ledit="${i}" title="Click to rename"`:""}>${t.live.task?esc(t.live.task)+" · ":""}${short(t.live.start)} – now…</div>`:"");
+      const chips = t.sessions.map((s,k)=>{
+        const m = Math.round(hours(s.start,s.end)*60);
+        return `<span class="chip ${editable?"clickable":""}" ${editable?`data-sedit="${i}:${k}" title="Click to edit"`:""}>${s.task?`<b>${esc(s.task)}</b>`:""}${short(s.start)}–${short(s.end)}<span class="ch">${m}m</span></span>`;
+      }).join("")
+        + (t.live?`<span class="chip live ${editable?"clickable":""}" ${editable?`data-ledit="${i}" title="Click to rename"`:""}>${t.live.task?`<b>${esc(t.live.task)}</b>`:""}${short(t.live.start)} – now<span class="ch" data-livemin="${i}">${Math.round(hours(t.live.start,hhmmss(new Date()))*60)}m</span></span>`:"");
       const noBlocks = !t.sessions.length && !t.live;
+      const h = taskHours(t);
+      const share = dayTotal>0 ? Math.min(100, Math.round(h/dayTotal*100)) : 0;
       return `<tr data-i="${i}">
         <td><span class="bpill ${brandCls(t.brand)}">${t.brand?esc(t.brand):"Default Task"}</span></td>
-        <td class="projcell">${esc(t.project)}</td>
-        <td class="taskdesc">${esc(t.task)||'<span style="opacity:.4">—</span>'}</td>
-        <td class="tbcell">${t.live?`<span class="livehint">● REC</span>`:""}<div class="sesswrap">${sess||`<span style="color:var(--ink-soft);opacity:.5">—</span>`}</div></td>
-        <td class="num ${noBlocks&&editable?"editable":""}" ${noBlocks&&editable?`data-eh="${i}" title="Click to set hours"`:""} data-hours="${i}"><strong>${fmtH(taskHours(t))}</strong></td>
+        <td><div class="projcell">${esc(t.project)}</div>${t.task?`<div class="taskdesc">${esc(t.task)}</div>`:""}</td>
+        <td class="tbcell">${t.live?`<span class="livehint">● REC</span>`:""}<div class="sesswrap">${chips||`<span style="color:var(--ink-soft);opacity:.5">—</span>`}</div></td>
+        <td class="num ${noBlocks&&editable?"editable":""}" ${noBlocks&&editable?`data-eh="${i}" title="Click to set hours"`:""} data-hours="${i}"><strong>${fmtH(h)}</strong><div class="hbar"><span style="width:${share}%"></span></div></td>
         <td><select class="status-sel ${STATUSES[t.status]||""}" data-st="${i}" ${editable?"":"disabled"}>
           ${Object.keys(STATUSES).map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}
         </select></td>
@@ -441,10 +450,12 @@ function renderTable(){
       </tr>`;
     }).join("");
   }
-  const total = list.reduce((a,t)=>a+taskHours(t),0);
+  const total = dayTotal;
   $("dayTotal").textContent = fmtH(total);
   $("statHours").textContent = fmtH(total);
   $("statTasks").textContent = list.length;
+  renderBrandStrip(list, total);
+  renderTarget(total);
 
   body.querySelectorAll("[data-st]").forEach(el=>el.onchange=()=>{
     const t = tasks()[+el.dataset.st];
@@ -478,6 +489,26 @@ function renderTable(){
       tr.addEventListener("mouseleave", scheduleHideHoverCard);
     });
   }
+}
+
+function renderBrandStrip(list, total){
+  const agg = {};
+  list.forEach(t=>{ const h=taskHours(t); if(h>0) agg[t.brand]=(agg[t.brand]||0)+h; });
+  const keys = Object.keys(agg).sort((a,b)=>agg[b]-agg[a]);
+  $("brandStrip").innerHTML = keys.map(k=>{
+    const b = BRANDS.find(x=>x.v===k)||BRANDS[0];
+    const pct = total>0 ? Math.round(agg[k]/total*100) : 0;
+    return `<span class="bsitem"><span class="bpill ${b.cls}">${b.label}</span><span class="v">${fmtH(agg[k])}h</span>· ${pct}%</span>`;
+  }).join("");
+}
+function renderTarget(total){
+  const goal = settings.target || 8;
+  const pct = Math.min(100, Math.round(total/goal*100));
+  $("tgGoal").textContent = goal;
+  $("tgPct").textContent = pct + "%";
+  const fill = $("tgFill");
+  fill.style.width = pct + "%";
+  fill.classList.toggle("full", pct>=100);
 }
 
 /* ---------- floating hover card (hover density) ---------- */
@@ -522,6 +553,8 @@ function tick(){
     if(!t.live) return;
     const cell=document.querySelector(`[data-hours="${i}"] strong`);
     if(cell) cell.textContent=fmtH(taskHours(t));
+    const lm=document.querySelector(`[data-livemin="${i}"]`);
+    if(lm) lm.textContent = Math.round(hours(t.live.start,hhmmss(new Date()))*60)+"m";
     if(settings.remind && t.live.remind && t.live.nextRemind){
       const elapsedMin = hours(t.live.start, hhmmss(new Date()))*60;
       if(elapsedMin >= t.live.nextRemind){
@@ -534,9 +567,10 @@ function tick(){
   if(dirty) save();
   if(pipWin) renderPip();
   if(list.some(t=>t.live)){
-    const total = fmtH(list.reduce((a,t)=>a+taskHours(t),0));
-    $("dayTotal").textContent = total;
-    $("statHours").textContent = total;
+    const totalNum = list.reduce((a,t)=>a+taskHours(t),0);
+    $("dayTotal").textContent = fmtH(totalNum);
+    $("statHours").textContent = fmtH(totalNum);
+    renderTarget(totalNum);
   }
 }
 

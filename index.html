@@ -69,12 +69,14 @@
       <button class="btn pri" id="addBtn" type="button">+ Add</button>
     </div>
 
+    <div class="brandstrip" id="brandStrip"></div>
+
     <div class="tablewrap">
     <table class="sheet">
       <thead><tr>
-        <th style="width:108px">Brand</th><th style="width:170px">Project</th><th>Task</th>
-        <th style="width:250px">Timeblocks</th><th style="width:78px">Hours</th>
-        <th style="width:130px">Status</th><th style="width:150px"></th>
+        <th style="width:112px">Brand</th><th style="width:26%">Project</th>
+        <th>Timeblocks</th><th style="width:92px">Hours</th>
+        <th style="width:132px">Status</th><th style="width:152px"></th>
       </tr></thead>
       <tbody id="taskBody"></tbody>
     </table>
@@ -82,6 +84,10 @@
 
     <div class="foot">
       <span class="total"><span id="dayTotal">0.00</span> <span class="u">HRS</span></span>
+      <div class="tgwrap">
+        <div class="tglabel"><span id="tgPct">0%</span> of <span id="tgGoal">8</span>h target</div>
+        <div class="tgbar"><span id="tgFill"></span></div>
+      </div>
       <span class="spacer"></span>
       <button class="btn" id="previewBtn">👁 Preview</button>
       <button class="btn" id="copyBtn">⧉ Copy for Sheets</button>
@@ -174,6 +180,10 @@
         <button type="button" data-dn="compact">COMPACT</button>
         <button type="button" data-dn="hover">HOVER</button>
       </div>
+    </div>
+    <div class="setrow">
+      <div><div class="sl">Day target</div><div class="sd">Hours goal shown in the footer bar</div></div>
+      <input id="targetHrs" inputmode="decimal" title="Target hours" style="width:56px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);text-align:center">
     </div>
     <div class="setrow">
       <div><div class="sl">Timer reminders</div><div class="sd">Ping while a timeblock keeps running</div></div>
