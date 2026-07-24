@@ -369,6 +369,22 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 .hovercard .sess.clickable:hover{color:var(--cyan)}
 .livehint{display:none;color:var(--red);font-size:11px;font-weight:600;animation:pulse 1.15s infinite;margin-right:8px}
 
+/* ---------- time gaps ---------- */
+.gtimeline{
+  position:relative;height:34px;border:1px solid var(--line-strong);border-radius:8px;
+  background:var(--panel-2);overflow:hidden;margin-top:4px;
+}
+.gtimeline .seg{position:absolute;top:0;bottom:0}
+.gtimeline .seg.cov{background:var(--cyan-dim);border-left:1px solid var(--cyan);border-right:1px solid var(--cyan)}
+.gtimeline .seg.cov::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,var(--cyan-dim))}
+.gtimeline .seg.gap{
+  background:repeating-linear-gradient(-45deg, var(--red-bg) 0 6px, transparent 6px 12px);
+  border-left:1px dashed var(--red);border-right:1px dashed var(--red);
+}
+.gscale{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-soft);margin-top:5px;font-variant-numeric:tabular-nums;letter-spacing:.08em}
+.gap-dur{color:var(--red);font-weight:600}
+.cov-pct{color:var(--cyan);font-weight:700}
+
 /* ---------- export preview ---------- */
 .modal.wide{width:min(860px,96vw)}
 .phint{font-size:11.5px;color:var(--ink-soft);margin-bottom:12px;line-height:1.7}

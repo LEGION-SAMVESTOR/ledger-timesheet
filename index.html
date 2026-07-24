@@ -89,6 +89,7 @@
         <div class="tgbar"><span id="tgFill"></span></div>
       </div>
       <span class="spacer"></span>
+      <button class="btn" id="gapsBtn">⧗ Gaps</button>
       <button class="btn" id="previewBtn">👁 Preview</button>
       <button class="btn" id="copyBtn">⧉ Copy for Sheets</button>
     </div>
@@ -208,6 +209,20 @@
     </div>
     <div class="mbtns" style="margin-top:14px">
       <button type="button" class="btn pri small" id="setClose">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- time gaps modal -->
+<div class="overlay" id="gapsOverlay">
+  <div class="modal wide">
+    <h3>Time gaps</h3>
+    <p class="phint" id="gapsSummary"></p>
+    <div class="gtimeline" id="gapsTimeline"></div>
+    <div class="gscale"><span id="gapsFrom"></span><span id="gapsTo"></span></div>
+    <div class="prevwrap" style="margin-top:12px"><table class="prevtable" id="gapsTable"></table></div>
+    <div class="mbtns" style="margin-top:14px">
+      <button type="button" class="btn pri small" id="gapsClose">Done</button>
     </div>
   </div>
 </div>

@@ -237,7 +237,7 @@ function buildBrandMenu(){
 $("brandBtn").onclick = e=>{ e.stopPropagation(); $("brandDD").classList.toggle("open"); };
 document.addEventListener("click", e=>{ if(!$("brandDD").contains(e.target)) $("brandDD").classList.remove("open"); });
 document.addEventListener("keydown", e=>{
-  if(e.key==="Escape"){ $("brandDD").classList.remove("open"); closeBlock(); $("editOverlay").classList.remove("show"); $("setOverlay").classList.remove("show"); $("prevOverlay").classList.remove("show"); }
+  if(e.key==="Escape"){ $("brandDD").classList.remove("open"); closeBlock(); $("editOverlay").classList.remove("show"); $("setOverlay").classList.remove("show"); $("prevOverlay").classList.remove("show"); $("gapsOverlay").classList.remove("show"); }
 });
 
 /* ---------- undo (20s window to resume a stopped task and run both) ---------- */
@@ -696,6 +696,66 @@ function copyRows(){
     });
 }
 $("copyBtn").onclick = copyRows;
+
+/* ---------- time gaps ---------- */
+const fmtMin = m => m>=60 ? `${Math.floor(m/60)}h ${Math.round(m%60)}m` : `${Math.round(m)}m`;
+const secToHM = s => `${String(Math.floor(s/3600)%24).padStart(2,"0")}:${String(Math.floor(s%3600/60)).padStart(2,"0")}`;
+$("gapsBtn").onclick = ()=>{
+  const list = tasks();
+  // gather all covered intervals (sessions + running timer)
+  let iv = [];
+  list.forEach(t=>{
+    t.sessions.forEach(s=>{ const a=toSec(s.start), b=toSec(s.end); if(a!=null&&b!=null&&b>a) iv.push([a,b]); });
+    if(t.live){ const a=toSec(t.live.start), b=toSec(hhmmss(new Date())); if(a!=null&&b>a) iv.push([a,b]); }
+  });
+  if(!iv.length){
+    $("gapsSummary").innerHTML = "No timeblocks logged this day yet — nothing to audit.";
+    $("gapsTimeline").innerHTML = ""; $("gapsTable").innerHTML = "";
+    $("gapsFrom").textContent = ""; $("gapsTo").textContent = "";
+    $("gapsOverlay").classList.add("show");
+    return;
+  }
+  iv.sort((a,b)=>a[0]-b[0]);
+  const merged = [iv[0].slice()];
+  for(const [a,b] of iv.slice(1)){
+    const last = merged[merged.length-1];
+    if(a <= last[1]) last[1] = Math.max(last[1], b);
+    else merged.push([a,b]);
+  }
+  const dayStart = merged[0][0];
+  // end of window: now for today, last block end for a past day
+  const dayEnd = viewDay===todayKey() ? Math.max(toSec(hhmmss(new Date())), merged[merged.length-1][1]) : merged[merged.length-1][1];
+  const span = Math.max(1, dayEnd - dayStart);
+  // gaps = complement inside [dayStart, dayEnd]
+  const gaps = [];
+  let cursor = dayStart;
+  for(const [a,b] of merged){
+    if(a > cursor) gaps.push([cursor, a]);
+    cursor = Math.max(cursor, b);
+  }
+  if(cursor < dayEnd) gaps.push([cursor, dayEnd]);
+  const realGaps = gaps.filter(([a,b])=>b-a >= 60); // ignore sub-minute noise
+  const gapSec = realGaps.reduce((x,[a,b])=>x+(b-a),0);
+  const covPct = Math.round((span-gapSec)/span*100);
+  $("gapsSummary").innerHTML =
+    `Window <b>${secToHM(dayStart)} → ${secToHM(dayEnd)}</b> (${fmtMin(span/60)}) · ` +
+    `coverage <span class="cov-pct">${covPct}%</span> · ` +
+    (realGaps.length ? `<span class="gap-dur">${realGaps.length} gap${realGaps.length>1?"s":""} · ${fmtMin(gapSec/60)} untracked</span>` : `<span class="cov-pct">no gaps — fully tracked ✓</span>`);
+  // timeline segments
+  let segs = merged.map(([a,b])=>`<div class="seg cov" title="tracked ${secToHM(a)}–${secToHM(b)}" style="left:${(a-dayStart)/span*100}%;width:${(b-a)/span*100}%"></div>`).join("");
+  segs += realGaps.map(([a,b])=>`<div class="seg gap" title="gap ${secToHM(a)}–${secToHM(b)}" style="left:${(a-dayStart)/span*100}%;width:${(b-a)/span*100}%"></div>`).join("");
+  $("gapsTimeline").innerHTML = segs;
+  $("gapsFrom").textContent = secToHM(dayStart);
+  $("gapsTo").textContent = secToHM(dayEnd) + (viewDay===todayKey()?" (now)":"");
+  // gap list
+  $("gapsTable").innerHTML = "<tr><th>#</th><th>From</th><th>To</th><th>Length</th></tr>" +
+    (realGaps.length
+      ? realGaps.map(([a,b],k)=>`<tr><td>${k+1}</td><td>${secToHM(a)}</td><td>${secToHM(b)}</td><td class="gap-dur">${fmtMin((b-a)/60)}</td></tr>`).join("")
+      : `<tr><td colspan="4" style="color:var(--ink-soft)">Every minute between your first block and ${viewDay===todayKey()?"now":"the last block"} is tracked.</td></tr>`);
+  $("gapsOverlay").classList.add("show");
+};
+$("gapsClose").onclick = ()=>$("gapsOverlay").classList.remove("show");
+$("gapsOverlay").addEventListener("mousedown", e=>{ if(e.target===$("gapsOverlay")) $("gapsOverlay").classList.remove("show"); });
 
 /* ---------- export preview ---------- */
 $("previewBtn").onclick = ()=>{
