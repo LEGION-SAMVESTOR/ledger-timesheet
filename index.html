@@ -227,6 +227,24 @@
   </div>
 </div>
 
+<!-- assign gap modal -->
+<div class="overlay" id="assignOverlay">
+  <form class="modal" id="assignModal">
+    <h3>Assign gap to a task</h3>
+    <div class="field"><label>Entry / project</label><select id="aEntry"></select></div>
+    <div class="field"><label>Task for this block</label><input id="aTask" placeholder="What was this time spent on…"></div>
+    <div class="mrow">
+      <div class="field"><label>Start</label><input id="aStart"></div>
+      <div class="field"><label>End</label><input id="aEnd"></div>
+    </div>
+    <div class="merr" id="aErr"></div>
+    <div class="mbtns">
+      <button type="button" class="btn small" id="aCancel">Cancel</button>
+      <button type="submit" class="btn pri small">Assign</button>
+    </div>
+  </form>
+</div>
+
 <!-- export preview modal -->
 <div class="overlay" id="prevOverlay">
   <div class="modal wide">

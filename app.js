@@ -237,7 +237,7 @@ function buildBrandMenu(){
 $("brandBtn").onclick = e=>{ e.stopPropagation(); $("brandDD").classList.toggle("open"); };
 document.addEventListener("click", e=>{ if(!$("brandDD").contains(e.target)) $("brandDD").classList.remove("open"); });
 document.addEventListener("keydown", e=>{
-  if(e.key==="Escape"){ $("brandDD").classList.remove("open"); closeBlock(); $("editOverlay").classList.remove("show"); $("setOverlay").classList.remove("show"); $("prevOverlay").classList.remove("show"); $("gapsOverlay").classList.remove("show"); }
+  if(e.key==="Escape"){ $("brandDD").classList.remove("open"); closeBlock(); $("editOverlay").classList.remove("show"); $("setOverlay").classList.remove("show"); $("prevOverlay").classList.remove("show"); $("gapsOverlay").classList.remove("show"); $("assignOverlay").classList.remove("show"); }
 });
 
 /* ---------- undo (20s window to resume a stopped task and run both) ---------- */
@@ -653,26 +653,32 @@ $("addBtn").onclick = ()=>{
 $("fProject").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("addBtn").click();}});
 
 /* ---------- copy for sheets ---------- */
-function exportHours(t){ // finished time only — a live timer isn't exported
-  const h = t.sessions.reduce((a,s)=>a+hours(s.start,s.end),0);
-  if(!t.sessions.length && t.manualHours!=null) return t.manualHours;
-  return h;
+function exportBlocks(t, liveEnd){ // finished sessions + the running timer clipped at now
+  const blocks = t.sessions.slice();
+  if(t.live) blocks.push({task:t.live.task, start:t.live.start, end:liveEnd});
+  return blocks;
+}
+function exportHours(t, liveEnd){
+  const blocks = exportBlocks(t, liveEnd);
+  if(!blocks.length && t.manualHours!=null) return t.manualHours;
+  return blocks.reduce((a,s)=>a+hours(s.start,s.end),0);
 }
 function buildRows(){
   const list = tasks();
+  const liveEnd = hhmmss(new Date());
   const rows=[];
   for(const i of orderedIndices(list)){
     const t = list[i];
-    const total = exportHours(t);
+    const total = exportHours(t, liveEnd);
     if(total<=0) continue; // skip zero-hour entries
+    const blocks = exportBlocks(t, liveEnd);
     const brandName = t.brand || "Default Task";
     // every Default-Task entry exports as one final-value row — no start/end times
-    if(!t.brand || isDefaultEntry(t) || !t.sessions.length){
-      // final value only — one row
-      const desc = t.task || (t.sessions[0] && t.sessions[0].task) || "";
+    if(!t.brand || isDefaultEntry(t) || !blocks.length){
+      const desc = t.task || (blocks[0] && blocks[0].task) || "";
       rows.push([brandName, t.project, desc, "", "", fmtH(total), t.status]);
     } else {
-      t.sessions.forEach((s,k)=>{
+      blocks.forEach((s,k)=>{
         rows.push([
           k===0 ? brandName : "", k===0 ? t.project : "",
           s.task || (k===0 ? t.task : ""),
@@ -688,8 +694,9 @@ function copyRows(){
   const rows = buildRows();
   if(!rows.length){ toast("Nothing to copy — no logged time yet"); return; }
   const tsv = rows.map(r=>r.join("\t")).join("\n");
+  const liveNote = tasks().some(t=>t.live) ? " · running timer included up to now" : "";
   navigator.clipboard.writeText(tsv).then(
-    ()=>toast(`Copied ${rows.length} row${rows.length>1?"s":""} — paste with Ctrl+Shift+V to keep the sheet's dropdowns`),
+    ()=>toast(`Copied ${rows.length} row${rows.length>1?"s":""} — paste with Ctrl+Shift+V to keep the sheet's dropdowns${liveNote}`),
     ()=>{
       const ta=document.createElement("textarea"); ta.value=tsv; document.body.appendChild(ta);
       ta.select(); document.execCommand("copy"); ta.remove(); toast("Copied — paste with Ctrl+Shift+V");
@@ -748,13 +755,46 @@ $("gapsBtn").onclick = ()=>{
   $("gapsFrom").textContent = secToHM(dayStart);
   $("gapsTo").textContent = secToHM(dayEnd) + (viewDay===todayKey()?" (now)":"");
   // gap list
-  $("gapsTable").innerHTML = "<tr><th>#</th><th>From</th><th>To</th><th>Length</th></tr>" +
+  const canAssign = viewDay===todayKey();
+  $("gapsTable").innerHTML = `<tr><th>#</th><th>From</th><th>To</th><th>Length</th>${canAssign?"<th></th>":""}</tr>` +
     (realGaps.length
-      ? realGaps.map(([a,b],k)=>`<tr><td>${k+1}</td><td>${secToHM(a)}</td><td>${secToHM(b)}</td><td class="gap-dur">${fmtMin((b-a)/60)}</td></tr>`).join("")
-      : `<tr><td colspan="4" style="color:var(--ink-soft)">Every minute between your first block and ${viewDay===todayKey()?"now":"the last block"} is tracked.</td></tr>`);
+      ? realGaps.map(([a,b],k)=>`<tr><td>${k+1}</td><td>${secToHM(a)}</td><td>${secToHM(b)}</td><td class="gap-dur">${fmtMin((b-a)/60)}</td>${canAssign?`<td><button type="button" class="icon-btn" data-assign="${a}:${b}">→ assign</button></td>`:""}</tr>`).join("")
+      : `<tr><td colspan="${canAssign?5:4}" style="color:var(--ink-soft)">Every minute between your first block and ${viewDay===todayKey()?"now":"the last block"} is tracked.</td></tr>`);
+  $("gapsTable").querySelectorAll("[data-assign]").forEach(el=>el.onclick=()=>{
+    const [a,b] = el.dataset.assign.split(":").map(Number);
+    openAssign(a,b);
+  });
   $("gapsOverlay").classList.add("show");
 };
 $("gapsClose").onclick = ()=>$("gapsOverlay").classList.remove("show");
+const secToHMS = s => `${String(Math.floor(s/3600)%24).padStart(2,"0")}:${String(Math.floor(s%3600/60)).padStart(2,"0")}:${String(Math.floor(s%60)).padStart(2,"0")}`;
+function openAssign(aSec,bSec){
+  const list = tasks();
+  $("aEntry").innerHTML = orderedIndices(list).map(i=>{
+    const t=list[i];
+    return `<option value="${i}">${esc(t.brand||"Default Task")} · ${esc(t.project||"—")}</option>`;
+  }).join("");
+  $("aTask").value = "";
+  $("aStart").value = secToHMS(aSec);
+  $("aEnd").value = secToHMS(bSec);
+  $("aErr").textContent = "";
+  $("assignOverlay").classList.add("show");
+  setTimeout(()=>$("aTask").focus(),30);
+}
+$("aCancel").onclick = ()=>$("assignOverlay").classList.remove("show");
+$("assignOverlay").addEventListener("mousedown", e=>{ if(e.target===$("assignOverlay")) $("assignOverlay").classList.remove("show"); });
+$("assignModal").addEventListener("submit", e=>{
+  e.preventDefault();
+  const t = tasks()[+$("aEntry").value];
+  if(!t) return;
+  const st=$("aStart").value, en=$("aEnd").value;
+  if(!validT(st)||!validT(en)){ $("aErr").textContent="Times must be HH:MM (or HH:MM:SS)."; return; }
+  t.sessions.push({task:$("aTask").value.trim(), start:norm(st), end:norm(en)});
+  save(); renderTable();
+  $("assignOverlay").classList.remove("show");
+  toast("Gap assigned");
+  $("gapsBtn").click(); // refresh the audit
+});
 $("gapsOverlay").addEventListener("mousedown", e=>{ if(e.target===$("gapsOverlay")) $("gapsOverlay").classList.remove("show"); });
 
 /* ---------- export preview ---------- */
