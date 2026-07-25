@@ -388,6 +388,12 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 /* ---------- export preview ---------- */
 .modal.wide{width:min(860px,96vw)}
 .phint{font-size:11.5px;color:var(--ink-soft);margin-bottom:12px;line-height:1.7}
+.prevbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.prevbar .spacer{flex:1}
+.prevbar-l{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);font-family:"Chakra Petch",sans-serif;font-weight:600}
+.prevmeta{font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.detailnote{color:var(--amber)}
+.prevtable tr.detailrow td{background:var(--panel-2);color:var(--ink-soft);font-style:italic}
 .prevwrap{overflow:auto;max-height:50vh;border:1px solid var(--line);border-radius:10px}
 .prevtable{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
 .prevtable td,.prevtable th{padding:6px 10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);white-space:nowrap;text-align:left}

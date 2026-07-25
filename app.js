@@ -164,8 +164,24 @@ function load(){
   for(const k of Object.keys(store.days)) if(!keep.has(k)) delete store.days[k];
   if(!store.days[todayKey()]) store.days[todayKey()] = [];
   migrate();
+  closeStaleTimers();
   seedDefaults(todayKey());
   save();
+}
+// a timer left running past midnight would otherwise count hours forever —
+// park it as a zero-length block on its own day so the real end time can be filled in
+function closeStaleTimers(){
+  let n = 0;
+  for(const [day, list] of Object.entries(store.days)){
+    if(day === todayKey()) continue;
+    list.forEach(t=>{
+      if(t.live){
+        t.sessions.push({task:t.live.task, start:t.live.start, end:t.live.start});
+        t.live = null; n++;
+      }
+    });
+  }
+  if(n) setTimeout(()=>toast(`${n} timer${n>1?"s":""} left running overnight — parked as 0m blocks, set the end time`), 1200);
 }
 const save = () => localStorage.setItem(dataKey(), JSON.stringify(store));
 const tasks = () => store.days[viewDay] || (store.days[viewDay]=[]);
@@ -663,20 +679,29 @@ function exportHours(t, liveEnd){
   if(!blocks.length && t.manualHours!=null) return t.manualHours;
   return blocks.reduce((a,s)=>a+hours(s.start,s.end),0);
 }
-function buildRows(){
+// every distinct block label on an entry, comma-joined — what a default task was spent on
+function blockLabels(blocks){
+  const seen = [];
+  blocks.forEach(s=>{ const l=(s.task||"").trim(); if(l && !seen.includes(l)) seen.push(l); });
+  return seen.join(", ");
+}
+// expandDefaults: preview-only view that also breaks default tasks into their blocks
+function buildRows(expandDefaults){
   const list = tasks();
   const liveEnd = hhmmss(new Date());
-  const rows=[];
+  const rows=[], meta=[];
   for(const i of orderedIndices(list)){
     const t = list[i];
     const total = exportHours(t, liveEnd);
     if(total<=0) continue; // skip zero-hour entries
     const blocks = exportBlocks(t, liveEnd);
     const brandName = t.brand || "Default Task";
-    // every Default-Task entry exports as one final-value row — no start/end times
-    if(!t.brand || isDefaultEntry(t) || !blocks.length){
-      const desc = t.task || (blocks[0] && blocks[0].task) || "";
+    const collapses = !t.brand || isDefaultEntry(t) || !blocks.length;
+    if(collapses && !(expandDefaults && blocks.length)){
+      // final value only — one row, task column lists every block label
+      const desc = blockLabels(blocks) || t.task || "";
       rows.push([brandName, t.project, desc, "", "", fmtH(total), t.status]);
+      meta.push({detail:false});
     } else {
       blocks.forEach((s,k)=>{
         rows.push([
@@ -685,13 +710,14 @@ function buildRows(){
           s.start, s.end, fmtH(hours(s.start,s.end)),
           k===0 ? t.status : ""
         ]);
+        meta.push({detail:collapses});
       });
     }
   }
-  return rows;
+  return {rows, meta};
 }
 function copyRows(){
-  const rows = buildRows();
+  const {rows} = buildRows(false); // clipboard always keeps default tasks collapsed
   if(!rows.length){ toast("Nothing to copy — no logged time yet"); return; }
   const tsv = rows.map(r=>r.join("\t")).join("\n");
   const liveNote = tasks().some(t=>t.live) ? " · running timer included up to now" : "";
@@ -798,16 +824,28 @@ $("assignModal").addEventListener("submit", e=>{
 $("gapsOverlay").addEventListener("mousedown", e=>{ if(e.target===$("gapsOverlay")) $("gapsOverlay").classList.remove("show"); });
 
 /* ---------- export preview ---------- */
-$("previewBtn").onclick = ()=>{
-  const rows = buildRows();
+let prevExpand = false;
+function renderPreview(){
+  const {rows, meta} = buildRows(prevExpand);
   const head = ["Brand","Project","Task","Start","End","Hours","Status"];
+  const total = rows.reduce((a,r)=>a+(parseFloat(r[5])||0),0);
   $("prevTable").innerHTML =
     "<tr>"+head.map(h=>`<th>${h}</th>`).join("")+"</tr>" +
     (rows.length
-      ? rows.map(r=>"<tr>"+r.map(c=>`<td>${esc(c)||""}</td>`).join("")+"</tr>").join("")
+      ? rows.map((r,k)=>`<tr class="${meta[k].detail?"detailrow":""}">`+r.map(c=>`<td>${esc(c)||""}</td>`).join("")+"</tr>").join("")
       : `<tr><td colspan="7" style="color:var(--ink-soft)">Nothing to export yet — no logged time.</td></tr>`);
-  $("prevOverlay").classList.add("show");
-};
+  $("prevMeta").innerHTML = rows.length
+    ? `${rows.length} row${rows.length>1?"s":""} · ${fmtH(total)} h` +
+      (prevExpand ? ` · <span class="detailnote">shaded rows are detail only — the clipboard still sends one total row per default task</span>` : "")
+    : "";
+  $("prevExpandSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on",(b.dataset.px==="1")===prevExpand));
+}
+$("previewBtn").onclick = ()=>{ renderPreview(); $("prevOverlay").classList.add("show"); };
+$("prevExpandSeg").addEventListener("click", e=>{
+  if(e.target.dataset.px===undefined) return;
+  prevExpand = e.target.dataset.px==="1";
+  renderPreview();
+});
 $("prevClose").onclick = ()=>$("prevOverlay").classList.remove("show");
 $("prevCopy").onclick = ()=>{ copyRows(); $("prevOverlay").classList.remove("show"); };
 $("prevOverlay").addEventListener("mousedown", e=>{ if(e.target===$("prevOverlay")) $("prevOverlay").classList.remove("show"); });

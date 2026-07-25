@@ -250,6 +250,15 @@
   <div class="modal wide">
     <h3>Export preview</h3>
     <p class="phint">Exactly what “Copy for Sheets” puts on the clipboard. In the sheet, paste with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> (paste values only) so the Brand and Status dropdown chips stay intact.</p>
+    <div class="prevbar">
+      <div class="prevbar-l">Default tasks</div>
+      <div class="seg" id="prevExpandSeg">
+        <button type="button" data-px="0">TOTAL ONLY</button>
+        <button type="button" data-px="1">SHOW BLOCKS</button>
+      </div>
+      <span class="spacer"></span>
+      <div class="prevmeta" id="prevMeta"></div>
+    </div>
     <div class="prevwrap"><table class="prevtable" id="prevTable"></table></div>
     <div class="mbtns" style="margin-top:14px">
       <button type="button" class="btn small" id="prevClose">Close</button>
