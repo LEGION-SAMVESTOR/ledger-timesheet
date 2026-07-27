@@ -137,7 +137,7 @@ function remindPing(t){
 }
 
 /* ---------- storage ---------- */
-let user=null, store=null, viewDay=null, curBrand="";
+let user=null, store=null, viewDay=null, curBrand="", prevDay=null;
 const dataKey = () => "ledger.data." + user;
 function newEntry(o){ return Object.assign({brand:"",project:"",task:"",status:"Done",sessions:[],live:null,manualHours:null,isDefault:false}, o); }
 function migrate(){
@@ -157,10 +157,24 @@ function seedDefaults(day){
   if(list.length) return;
   DEFAULT_ENTRIES.forEach(d=>list.push(newEntry({project:d.project, task:d.task, isDefault:true})));
 }
+// any real tracked time on a day — a single logged minute counts
+function hasLoggedTime(list){
+  return (list||[]).some(t => (t.sessions&&t.sessions.length) || t.live || (t.manualHours!=null && t.manualHours>0));
+}
+// the day actually worked before today (Saturday counts if time was logged),
+// falling back to the calendar weekday when nothing is stored yet
+function lastWorkedDay(){
+  const today = todayKey();
+  const worked = Object.keys(store.days)
+    .filter(k => k < today && hasLoggedTime(store.days[k]))
+    .sort();
+  return worked.length ? worked[worked.length-1] : prevWorkingDay(today);
+}
 function load(){
   store = JSON.parse(localStorage.getItem(dataKey()) || "{}");
   if(!store.days) store.days = {};
-  const keep = new Set([todayKey(), prevWorkingDay(todayKey())]);
+  prevDay = lastWorkedDay();
+  const keep = new Set([todayKey(), prevDay]);
   for(const k of Object.keys(store.days)) if(!keep.has(k)) delete store.days[k];
   if(!store.days[todayKey()]) store.days[todayKey()] = [];
   migrate();
@@ -412,8 +426,8 @@ function render(){
   $("addBar").style.opacity = viewDay===todayKey() ? 1 : .45;
 }
 function renderTabs(){
-  const prev = prevWorkingDay(todayKey());
-  const tabs = [[todayKey(),"TODAY"],[prev,"PREV WORKING DAY"]];
+  const prev = prevDay || prevWorkingDay(todayKey());
+  const tabs = [[todayKey(),"TODAY"],[prev, hasLoggedTime(store.days[prev]) ? "LAST WORKED" : "PREV WORKING DAY"]];
   $("dayTabs").innerHTML = tabs.map(([k,label])=>
     `<button class="daytab ${k===viewDay?"active":""}" data-day="${k}">${label} · ${fmtDate(k)}</button>`).join("");
   [...$("dayTabs").children].forEach(b=>b.onclick=()=>{viewDay=b.dataset.day;render();});
@@ -732,6 +746,8 @@ $("copyBtn").onclick = copyRows;
 
 /* ---------- time gaps ---------- */
 const fmtMin = m => m>=60 ? `${Math.floor(m/60)}h ${Math.round(m%60)}m` : `${Math.round(m)}m`;
+// distinct lane colours — red is reserved for gaps
+const GANTT_COLORS = ["#38e1ff","#3ddc84","#ffc24b","#9d7bff","#ff5ce1","#5ea8ff","#ff9f45","#4de0c0","#c3e04d","#f78ab0"];
 const secToHM = s => `${String(Math.floor(s/3600)%24).padStart(2,"0")}:${String(Math.floor(s%3600/60)).padStart(2,"0")}`;
 $("gapsBtn").onclick = ()=>{
   const list = tasks();
@@ -743,8 +759,7 @@ $("gapsBtn").onclick = ()=>{
   });
   if(!iv.length){
     $("gapsSummary").innerHTML = "No timeblocks logged this day yet — nothing to audit.";
-    $("gapsTimeline").innerHTML = ""; $("gapsTable").innerHTML = "";
-    $("gapsFrom").textContent = ""; $("gapsTo").textContent = "";
+    $("gapsChart").innerHTML = ""; $("gapsTable").innerHTML = "";
     $("gapsOverlay").classList.add("show");
     return;
   }
@@ -774,12 +789,41 @@ $("gapsBtn").onclick = ()=>{
     `Window <b>${secToHM(dayStart)} → ${secToHM(dayEnd)}</b> (${fmtMin(span/60)}) · ` +
     `coverage <span class="cov-pct">${covPct}%</span> · ` +
     (realGaps.length ? `<span class="gap-dur">${realGaps.length} gap${realGaps.length>1?"s":""} · ${fmtMin(gapSec/60)} untracked</span>` : `<span class="cov-pct">no gaps — fully tracked ✓</span>`);
-  // timeline segments
-  let segs = merged.map(([a,b])=>`<div class="seg cov" title="tracked ${secToHM(a)}–${secToHM(b)}" style="left:${(a-dayStart)/span*100}%;width:${(b-a)/span*100}%"></div>`).join("");
-  segs += realGaps.map(([a,b])=>`<div class="seg gap" title="gap ${secToHM(a)}–${secToHM(b)}" style="left:${(a-dayStart)/span*100}%;width:${(b-a)/span*100}%"></div>`).join("");
-  $("gapsTimeline").innerHTML = segs;
-  $("gapsFrom").textContent = secToHM(dayStart);
-  $("gapsTo").textContent = secToHM(dayEnd) + (viewDay===todayKey()?" (now)":"");
+  // ---- gantt: one lane per entry, each entry its own colour ----
+  const pos = s => (s-dayStart)/span*100;
+  const liveNow = hhmmss(new Date());
+  // hour gridlines + axis labels
+  let ticks = "", axis = "";
+  for(let s = Math.ceil(dayStart/3600)*3600; s < dayEnd; s += 3600){
+    ticks += `<div class="tick" style="left:${pos(s)}%"></div>`;
+    axis  += `<span class="atick" style="left:${pos(s)}%">${secToHM(s)}</span>`;
+  }
+  let rows = `<div class="grow gaxis"><div class="glabel">${secToHM(dayStart)} → ${secToHM(dayEnd)}${viewDay===todayKey()?" (now)":""}</div><div class="gtrack">${axis}</div></div>`;
+  let c = 0;
+  orderedIndices(list).forEach(i=>{
+    const t = list[i];
+    const blocks = t.sessions.map(s=>[s.task, toSec(s.start), toSec(s.end), false])
+      .concat(t.live ? [[t.live.task, toSec(t.live.start), toSec(liveNow), true]] : [])
+      .filter(b=>b[1]!=null && b[2]>b[1]);
+    if(!blocks.length) return;
+    const col = GANTT_COLORS[c++ % GANTT_COLORS.length];
+    const mins = Math.round(blocks.reduce((a,b)=>a+(b[2]-b[1]),0)/60);
+    rows += `<div class="grow">
+      <div class="glabel" title="${esc((t.brand||"Default Task")+" · "+(t.project||""))}">
+        <span class="gdot" style="background:${col}"></span>${esc(t.project||t.brand||"—")} <span class="gsub">${fmtMin(mins)}</span>
+      </div>
+      <div class="gtrack">${ticks}${blocks.map(([lbl,a,b,isLive])=>
+        `<div class="gblk ${isLive?"livegblk":""}" style="left:${pos(a)}%;width:${Math.max(0.4,(b-a)/span*100)}%;background:${col}${isLive?";box-shadow:0 0 0 1.5px var(--red)":""}" title="${esc(lbl||t.project||"block")} · ${secToHM(a)}–${secToHM(b)} · ${fmtMin((b-a)/60)}"><span class="gtxt">${esc(lbl||"")}</span></div>`
+      ).join("")}</div>
+    </div>`;
+  });
+  rows += `<div class="grow gapsrow">
+    <div class="glabel"><span class="gdot" style="background:repeating-linear-gradient(-45deg,var(--red) 0 3px,transparent 3px 6px);box-shadow:inset 0 0 0 1px var(--red)"></span>Gaps <span class="gsub">${realGaps.length?fmtMin(gapSec/60):"none"}</span></div>
+    <div class="gtrack">${ticks}${realGaps.map(([a,b])=>
+      `<div class="gblk gapblk" style="left:${pos(a)}%;width:${Math.max(0.4,(b-a)/span*100)}%" title="gap ${secToHM(a)}–${secToHM(b)} · ${fmtMin((b-a)/60)}"><span class="gtxt">${(b-a)>=900?fmtMin((b-a)/60):""}</span></div>`
+    ).join("")}</div>
+  </div>`;
+  $("gapsChart").innerHTML = rows;
   // gap list
   const canAssign = viewDay===todayKey();
   $("gapsTable").innerHTML = `<tr><th>#</th><th>From</th><th>To</th><th>Length</th>${canAssign?"<th></th>":""}</tr>` +
