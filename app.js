@@ -13,6 +13,7 @@ const BRANDS = [
   {v:"RW",  label:"RW",  cls:"b-RW"},
   {v:"AUJ", label:"AUJ", cls:"b-AUJ"},
   {v:"SV",  label:"SV",  cls:"b-SV"},
+  {v:"BM",  label:"BM",  cls:"b-BM"},
 ];
 const DEFAULT_ENTRIES = [
   {project:"Meeting",     task:""},
@@ -59,7 +60,7 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 
 /* ---------- settings ---------- */
 const PALETTE_DEFAULT = {bg:"#07090d", surface:"#101620", text:"#dbe7f0", muted:"#6d7f8f", accent:"#38e1ff"};
-const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", toonImages:{}, bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", seed:true, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
+const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", toonImages:{}, imgfx:"front", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", seed:true, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
 let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(LS_SET) || "{}"));
 settings.palette = Object.assign({}, PALETTE_DEFAULT, settings.palette||{});
 settings.toonImages = settings.toonImages || {};
@@ -104,20 +105,137 @@ function themeSprites(){
     .filter(u=>/^https?:\/\/[^\s"'()\\]+$/i.test(u));
   return ups.concat(urls).slice(0,4);
 }
+/* ---------- IMGFX: canvas field of drifting, cursor-reactive artwork ---------- */
+const IMGFX = (function(){
+  const CFG = {
+    count:14, minSize:60, maxSize:160,
+    speed:.45, spin:.35,
+    mouseRadius:180, mouseForce:1.6,
+    drag:.992, maxSpeed:6, opacity:.55
+  };
+  let cv=null, ctx=null, raf=0, parts=[], imgs=[], W=0, H=0, DPR=1, token=0;
+  const M = {x:-9999,y:-9999,px:-9999,py:-9999,dx:0,dy:0,down:false};
+  const rnd = (a,b)=>a+Math.random()*(b-a);
+
+  function resize(){
+    W = innerWidth; H = innerHeight;
+    cv.width = W*DPR; cv.height = H*DPR;
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  const onMove = e=>{ M.px=M.x; M.py=M.y; M.x=e.clientX; M.y=e.clientY; M.dx=M.x-M.px; M.dy=M.y-M.py; };
+  const onDown = ()=>M.down=true;
+  const onUp   = ()=>M.down=false;
+  const onLeave= ()=>{ M.x=M.y=-9999; };
+
+  function stop(){
+    token++;
+    if(raf) cancelAnimationFrame(raf);
+    raf = 0;
+    removeEventListener("resize", resize);
+    removeEventListener("mousemove", onMove);
+    removeEventListener("mousedown", onDown);
+    removeEventListener("mouseup", onUp);
+    removeEventListener("mouseleave", onLeave);
+    if(cv){ cv.remove(); cv=null; ctx=null; }
+    parts = []; imgs = [];
+  }
+
+  function start(sources, layer){
+    stop();
+    if(!sources.length) return;
+    const mine = ++token;
+    Promise.all(sources.map(src=>new Promise(res=>{
+      const im = new Image();
+      im.onload = ()=>res(im);
+      im.onerror = ()=>res(null);   // a dead URL just drops out
+      im.src = src;
+    }))).then(loaded=>{
+      if(mine !== token) return;     // superseded while decoding
+      imgs = loaded.filter(Boolean);
+      if(!imgs.length) return;
+      run(layer);
+    });
+  }
+
+  function run(layer){
+    DPR = Math.min(devicePixelRatio||1, 2);
+    cv = document.createElement("canvas");
+    cv.id = "imgfxCanvas";
+    cv.style.zIndex = layer==="front" ? "40" : "0";
+    document.body.prepend(cv);
+    ctx = cv.getContext("2d");
+    resize();
+    addEventListener("resize", resize);
+    addEventListener("mousemove", onMove, {passive:true});
+    addEventListener("mousedown", onDown);
+    addEventListener("mouseup", onUp);
+    addEventListener("mouseleave", onLeave);
+
+    parts = Array.from({length:CFG.count}, (_,i)=>{
+      const im = imgs[i % imgs.length];
+      const w = rnd(CFG.minSize, CFG.maxSize);
+      const a = rnd(0, Math.PI*2);
+      return {
+        img:im, x:rnd(0,W), y:rnd(0,H), w, h:w*(im.naturalHeight/im.naturalWidth || 1),
+        vx:Math.cos(a)*CFG.speed*rnd(.5,1.6), vy:Math.sin(a)*CFG.speed*rnd(.5,1.6),
+        rot:rnd(0,360), vr:rnd(-CFG.spin,CFG.spin), op:CFG.opacity*rnd(.6,1.15)
+      };
+    });
+
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if(still){ draw(); return; }   // park them rather than animate
+    tick();
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    for(const p of parts){
+      ctx.save();
+      ctx.globalAlpha = p.op;
+      ctx.translate(p.x,p.y);
+      ctx.rotate(p.rot*Math.PI/180);
+      ctx.drawImage(p.img, -p.w/2, -p.h/2, p.w, p.h);
+      ctx.restore();
+    }
+  }
+
+  function tick(){
+    const swipe = Math.min(Math.hypot(M.dx,M.dy)/14, 3);
+    for(const p of parts){
+      const dx = p.x-M.x, dy = p.y-M.y, d = Math.hypot(dx,dy);
+      if(d < CFG.mouseRadius && d > .1){
+        const near = 1 - d/CFG.mouseRadius;
+        const f = near * CFG.mouseForce * (M.down ? 2.2 : 1);
+        const sign = M.down ? -1 : 1;               // hold to pull them in
+        p.vx += (dx/d)*f*.35*sign;
+        p.vy += (dy/d)*f*.35*sign;
+        p.vx += M.dx*.02*swipe*near;                // flick them with the cursor
+        p.vy += M.dy*.02*swipe*near;
+        p.vr += M.dx*.01*near;
+      }
+      p.vx *= CFG.drag; p.vy *= CFG.drag; p.vr *= .99;
+      const sp = Math.hypot(p.vx,p.vy);
+      if(sp > CFG.maxSpeed){ p.vx = p.vx/sp*CFG.maxSpeed; p.vy = p.vy/sp*CFG.maxSpeed; }
+      if(sp < CFG.speed*.25){                        // never fully stall
+        const a = Math.random()*Math.PI*2;
+        p.vx += Math.cos(a)*.05; p.vy += Math.sin(a)*.05;
+      }
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      const m = Math.max(p.w,p.h);                   // wrap at the edges
+      if(p.x < -m) p.x = W+m; if(p.x > W+m) p.x = -m;
+      if(p.y < -m) p.y = H+m; if(p.y > H+m) p.y = -m;
+    }
+    draw();
+    raf = requestAnimationFrame(tick);
+  }
+
+  return {start, stop, cfg:CFG};
+})();
+
 function applyToonImages(){
   const imgs = settings.style==="toon" ? themeSprites() : [];
-  const fx = $("bgFx");
-  fx.classList.toggle("sprites", imgs.length>0);
-  document.querySelectorAll("#bgFx span").forEach((sp,i)=>{
-    if(imgs[i]){
-      sp.style.backgroundImage = `url("${imgs[i]}")`;
-      sp.classList.add("has-img"); sp.classList.remove("no-img");
-    } else {
-      sp.style.backgroundImage = "";
-      sp.classList.remove("has-img");
-      sp.classList.toggle("no-img", imgs.length>0);
-    }
-  });
+  if(!imgs.length || settings.imgfx==="off"){ IMGFX.stop(); return; }
+  IMGFX.start(imgs, settings.imgfx || "front");
 }
 function renderToonThumbs(){
   const list = toonImg[settings.toon] || [];
@@ -208,6 +326,7 @@ function applySettings(){
   $("styleSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.sy===settings.style));
   $("bgSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.bgfx===settings.bgfx));
   $("toonSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.tn===settings.toon));
+  $("imgfxSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.ix===settings.imgfx));
   $("fontSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.fn===settings.font));
   $("sizeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.fs===settings.fsize));
   $("accentDots").querySelectorAll(".dot").forEach(b=>b.classList.toggle("on", b.dataset.ac===settings.accent));
@@ -229,6 +348,7 @@ $("themeSeg").addEventListener("click", e=>{ if(e.target.dataset.th){ settings.t
 $("styleSeg").addEventListener("click", e=>{ if(e.target.dataset.sy){ settings.style=e.target.dataset.sy; saveSettings(); }});
 $("bgSeg").addEventListener("click", e=>{ if(e.target.dataset.bgfx){ settings.bgfx=e.target.dataset.bgfx; saveSettings(); }});
 $("toonSeg").addEventListener("click", e=>{ if(e.target.dataset.tn){ settings.toon=e.target.dataset.tn; saveSettings(); }});
+$("imgfxSeg").addEventListener("click", e=>{ if(e.target.dataset.ix){ settings.imgfx=e.target.dataset.ix; saveSettings(); }});
 $("fontSeg").addEventListener("click", e=>{ if(e.target.dataset.fn){ settings.font=e.target.dataset.fn; saveSettings(); }});
 $("sizeSeg").addEventListener("click", e=>{ if(e.target.dataset.fs){ settings.fsize=e.target.dataset.fs; saveSettings(); }});
 $("densitySeg").addEventListener("click", e=>{ if(e.target.dataset.dn){ settings.density=e.target.dataset.dn; saveSettings(); if(store) renderTable(); }});
