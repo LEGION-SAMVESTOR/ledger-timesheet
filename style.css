@@ -318,6 +318,10 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 .modal h3{font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-strong);margin-bottom:16px}
 /* tall modals (settings) scroll internally instead of overflowing small screens */
 .modal{max-height:90vh;display:flex;flex-direction:column}
+/* settings grows sideways rather than ever scrolling horizontally */
+#setOverlay .modal{width:fit-content;min-width:min(440px,94vw);max-width:min(94vw,820px)}
+.mbody{overflow-x:hidden}
+.seg{flex-wrap:wrap}
 .modal>h3{flex:0 0 auto}
 .modal>.mbtns,.modal>.merr{flex:0 0 auto}
 .mbody{
@@ -746,43 +750,58 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 [data-style="brutal"] h1,[data-style="brutal"] .mast h1,[data-style="brutal"] .login-card h1{letter-spacing:.02em}
 
 /* ---------- CARTOON ---------- */
+/* a complete sticker-book look: warm paper, ink outlines, hard shadows */
 [data-style="toon"]{
-  --radius:22px;
-  --toon-out:#171226;
-  --toon-shadow:rgba(23,18,38,.9);
+  --radius:20px;
+  --toon-out:#14110f;
+  --toon-shadow:#14110f;
   --bounce:cubic-bezier(.34,1.7,.5,1);
+  --bg:#fbeed2;
+  --panel:#fffdf6;
+  --panel-solid:#fffdf6;
+  --panel-2:#f8edd4;
+  --ink:#1a1512;
+  --ink-strong:#14110f;
+  --ink-soft:#7a6a55;
+  --line:rgba(26,21,18,.20);
+  --line-strong:rgba(26,21,18,.45);
+  --grid-line:transparent;
+  --green:#0f8a4d;--green-bg:#c9f2d8;
+  --blue:#1d64c0;--blue-bg:#d7e6ff;
+  --red:#c8202f;--red-bg:#ffdadd;
+  --amber:#9a6b00;--amber-bg:#ffe9b3;
+  --shadow:none;
 }
-[data-theme="dark"][data-style="toon"]{--toon-out:#0a0713;--toon-shadow:rgba(0,0,0,.85)}
-[data-style="toon"] h1,[data-style="toon"] h2,[data-style="toon"] h3,
-[data-style="toon"] .disp,[data-style="toon"] .btn,[data-style="toon"] .seg button,
+/* paper dots */
+[data-style="toon"] body{
+  background-color:var(--bg);
+  background-image:radial-gradient(circle, rgba(26,21,18,.16) 1.6px, transparent 1.6px);
+  background-size:22px 22px;background-position:0 0;
+}
+[data-style="toon"] .bgfx{opacity:.5;mix-blend-mode:multiply}
+[data-style="toon"] body,
+[data-style="toon"] .btn,[data-style="toon"] .seg button,
 [data-style="toon"] .bpill,[data-style="toon"] .status-sel,[data-style="toon"] .stat .v,
-[data-style="toon"] .foot .total,[data-style="toon"] .daytab,[data-style="toon"] .field label,
+[data-style="toon"] .daytab,[data-style="toon"] .field label,
 [data-style="toon"] .sheet th{font-family:"Fredoka",system-ui,sans-serif;letter-spacing:.01em}
-[data-style="toon"] h1,[data-style="toon"] .mast h1,[data-style="toon"] .login-card h1{
-  font-weight:700;letter-spacing:0;
-  text-shadow:3px 3px 0 var(--toon-out);
+/* chunky comic lettering with a hard ink offset */
+[data-style="toon"] .mast h1,
+[data-style="toon"] .login-card h1,
+[data-style="toon"] .boot-logo,
+[data-style="toon"] .empty .disp,
+[data-style="toon"] .foot .total,
+[data-style="toon"] .modal h3{
+  font-family:"Luckiest Guy",'Fredoka',cursive;font-weight:400;letter-spacing:.02em;
+  color:var(--cyan);-webkit-text-stroke:2px var(--toon-out);paint-order:stroke fill;
+  text-shadow:4px 4px 0 var(--toon-out);
 }
-[data-style="toon"] body{background-image:none;font-family:"Fredoka",system-ui,sans-serif}
-/* on dark backgrounds the panels lift so the dark outlines actually read */
-[data-theme="dark"][data-style="toon"] .panel,
-[data-theme="dark"][data-style="toon"] .modal,
-[data-theme="dark"][data-style="toon"] .login-card,
-[data-theme="dark"][data-style="toon"] .stat,
-[data-theme="dark"][data-style="toon"] .btn,
-[data-theme="dark"][data-style="toon"] .gearbtn,
-[data-theme="dark"][data-style="toon"] .daytab,
-[data-theme="dark"][data-style="toon"] .branddd-menu,
-[data-theme="dark"][data-style="toon"] .hovercard{
-  background:color-mix(in srgb, var(--panel-solid) 74%, var(--ink) 26%);
-}
-[data-theme="dark"][data-style="toon"] .field input,
-[data-theme="dark"][data-style="toon"] .field select,
-[data-theme="dark"][data-style="toon"] .branddd-btn,
-[data-theme="dark"][data-style="toon"] .gtrack,
-[data-theme="dark"][data-style="toon"] .prevwrap,
-[data-theme="dark"][data-style="toon"] .carrylist{
-  background:color-mix(in srgb, var(--panel-solid) 86%, var(--ink) 14%);
-}
+[data-style="toon"] .modal h3{font-size:20px;text-shadow:3px 3px 0 var(--toon-out);-webkit-text-stroke-width:1.5px}
+[data-style="toon"] .foot .total{font-size:26px;text-shadow:3px 3px 0 var(--toon-out)}
+[data-style="toon"] .mast h1 .tick,[data-style="toon"] .login-card h1 .tick{color:var(--red)}
+[data-style="toon"] .stat .v{color:var(--ink-strong)}
+[data-style="toon"] .sheet th{font-size:11px;letter-spacing:.08em}
+[data-style="toon"] .mast .who,[data-style="toon"] .field label,
+[data-style="toon"] .stat .l{color:var(--ink-soft);font-weight:600}
 [data-style="toon"] .panel,
 [data-style="toon"] .modal,
 [data-style="toon"] .login-card,
@@ -791,41 +810,56 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 [data-style="toon"] .toast,
 [data-style="toon"] .undobar{
   background:var(--panel-solid);backdrop-filter:none;
-  border:3px solid var(--toon-out);border-radius:22px;
-  box-shadow:0 7px 0 var(--toon-shadow);
+  border:3px solid var(--toon-out);border-radius:20px;
+  box-shadow:7px 8px 0 var(--toon-shadow);
+  position:relative;
+}
+/* strip of washi tape on the main panel, like a scrapbook page */
+[data-style="toon"] .panel::before{
+  content:"";position:absolute;top:-14px;left:34px;width:92px;height:26px;
+  background:repeating-linear-gradient(45deg, var(--cyan) 0 7px, color-mix(in srgb, var(--cyan) 55%, #fff) 7px 14px);
+  border:2.5px solid var(--toon-out);border-radius:4px;transform:rotate(-6deg);
+  box-shadow:2px 2px 0 var(--toon-shadow);
 }
 [data-style="toon"] .stat{
-  background:var(--panel-solid);border:3px solid var(--toon-out);border-radius:18px;
-  box-shadow:0 5px 0 var(--toon-shadow);
+  background:var(--panel-solid);border:3px solid var(--toon-out);border-radius:16px;
+  box-shadow:4px 5px 0 var(--toon-shadow);
 }
+[data-style="toon"] .stat:nth-child(2){transform:rotate(-1.5deg)}
+[data-style="toon"] .stat:nth-child(3){transform:rotate(1.5deg)}
 [data-style="toon"] .stat::after{display:none}
 [data-style="toon"] .btn,
 [data-style="toon"] .gearbtn,
 [data-style="toon"] .daytab{
-  border:3px solid var(--toon-out);border-radius:999px;
-  background:var(--panel-solid);color:var(--ink-strong);
-  box-shadow:0 5px 0 var(--toon-shadow);
+  border:3px solid var(--toon-out);border-radius:14px;
+  background:var(--panel-solid);color:var(--ink-strong);font-weight:600;
+  box-shadow:4px 5px 0 var(--toon-shadow);
   transition:transform .18s var(--bounce), box-shadow .18s var(--bounce), background .15s;
 }
 [data-style="toon"] .btn:hover,
 [data-style="toon"] .gearbtn:hover,
 [data-style="toon"] .daytab:hover{
-  transform:translateY(-3px) rotate(-1.2deg);box-shadow:0 8px 0 var(--toon-shadow);
+  transform:translate(-2px,-3px) rotate(-1.2deg);box-shadow:6px 8px 0 var(--toon-shadow);
   background:var(--cyan);color:var(--accent-ink);
 }
-[data-style="toon"] .btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--toon-shadow)}
+[data-style="toon"] .btn:active{transform:translate(4px,5px);box-shadow:0 0 0 var(--toon-shadow)}
 [data-style="toon"] .gearbtn{border-radius:50%;width:42px;height:42px}
-[data-style="toon"] .gearbtn:hover{transform:translateY(-3px) rotate(90deg)}
+[data-style="toon"] .gearbtn:hover{transform:translate(-2px,-3px) rotate(90deg)}
 [data-style="toon"] .btn.pri,
-[data-style="toon"] .daytab.active{background:var(--cyan);color:var(--accent-ink);box-shadow:0 5px 0 var(--toon-out)}
+[data-style="toon"] .daytab.active{background:var(--cyan);color:var(--accent-ink);box-shadow:4px 5px 0 var(--toon-out)}
+/* paste-here fields get the dashed scrapbook outline */
 [data-style="toon"] .field input,
 [data-style="toon"] .field select,
 [data-style="toon"] .branddd-btn,
 [data-style="toon"] .prevwrap,
 [data-style="toon"] .carrylist,
 [data-style="toon"] .gtrack{
-  background:var(--panel-2);border:3px solid var(--toon-out);border-radius:16px;box-shadow:none;
+  background:var(--panel-2);border:2.5px dashed var(--toon-out);border-radius:14px;box-shadow:none;
+  color:var(--ink);
 }
+[data-style="toon"] .addbar{border-bottom:3px solid var(--toon-out)}
+[data-style="toon"] .foot{border-top:3px solid var(--toon-out)}
+[data-style="toon"] .brandstrip{border-bottom:2.5px dashed var(--toon-out)}
 [data-style="toon"] .field input:focus,
 [data-style="toon"] .field select:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 4px var(--cyan-dim)}
 [data-style="toon"] .icon-btn{
@@ -839,12 +873,18 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 [data-style="toon"] .bsitem,
 [data-style="toon"] .lgitem{
   border:2.5px solid var(--toon-out);border-radius:999px;font-weight:600;
-  box-shadow:0 2.5px 0 var(--toon-shadow);
+  box-shadow:2px 2.5px 0 var(--toon-shadow);
 }
-[data-style="toon"] .chip{border-radius:14px}
+[data-style="toon"] .chip{border-radius:10px}
+[data-style="toon"] .bpill{transform:rotate(-1.5deg)}
 [data-style="toon"] .chip.clickable:hover{transform:translateY(-2px) rotate(-1deg)}
-[data-style="toon"] .seg{border:3px solid var(--toon-out);border-radius:999px;padding:2px;box-shadow:0 3px 0 var(--toon-shadow)}
-[data-style="toon"] .seg button{border-radius:999px}
+[data-style="toon"] .seg{border:3px solid var(--toon-out);border-radius:12px;padding:2px;box-shadow:3px 3px 0 var(--toon-shadow)}
+[data-style="toon"] .seg button{border-radius:9px;font-weight:600}
+[data-style="toon"] .icon-btn{background:var(--panel-solid)}
+[data-style="toon"] .overlay{background:rgba(26,21,18,.45)}
+[data-style="toon"] .swatches input[type=color]{border:2.5px solid var(--toon-out);border-radius:9px;box-shadow:2px 2px 0 var(--toon-shadow)}
+[data-style="toon"] .setrow{border-bottom:2px dashed color-mix(in srgb, var(--ink) 22%, transparent)}
+[data-style="toon"] .mbody::-webkit-scrollbar-thumb{background:var(--toon-out);border-radius:99px}
 [data-style="toon"] .seg button.on{background:var(--cyan);color:var(--accent-ink)}
 [data-style="toon"] .sheet th{
   background:var(--cyan);color:var(--accent-ink);border-bottom:3px solid var(--toon-out);
