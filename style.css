@@ -316,6 +316,17 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 }
 .modal::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent)}
 .modal h3{font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-strong);margin-bottom:16px}
+/* tall modals (settings) scroll internally instead of overflowing small screens */
+.modal{max-height:90vh;display:flex;flex-direction:column}
+.modal>h3{flex:0 0 auto}
+.modal>.mbtns,.modal>.merr{flex:0 0 auto}
+.mbody{
+  flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;
+  margin:0 -6px;padding:0 6px;
+}
+.mbody::-webkit-scrollbar{width:8px}
+.mbody::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:99px}
+.mbody::-webkit-scrollbar-track{background:transparent}
 .modal .mrow{display:flex;gap:10px}
 .modal .mrow .field{flex:1}
 .modal .mbtns{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
@@ -549,10 +560,9 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 
 @media (prefers-reduced-motion: reduce){ .bgfx span{animation:none !important} }
 
-/* glass & neo read best with a touch more separation over motion */
-[data-bgfx]:not([data-bgfx="off"])[data-style="glass"] .panel,
-[data-bgfx]:not([data-bgfx="off"])[data-style="glass"] .modal{
-  background:color-mix(in srgb, var(--panel-solid) 34%, transparent);
+/* the main panel can go airier over motion — dialogs must stay readable */
+[data-bgfx]:not([data-bgfx="off"])[data-style="glass"] .panel{
+  background:color-mix(in srgb, var(--panel-solid) 40%, transparent);
 }
 
 /* ============================================================
@@ -596,6 +606,30 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 }
 [data-style="glass"] .btn{backdrop-filter:blur(10px);border-radius:12px}
 [data-style="glass"] .sheet th{background:transparent}
+/* dialogs sit over content, so they stay near-opaque and legible */
+[data-style="glass"] .modal,
+[data-style="glass"] .branddd-menu,
+[data-style="glass"] .hovercard,
+[data-style="glass"] .toast,
+[data-style="glass"] .undobar{
+  background:color-mix(in srgb, var(--panel-solid) 94%, transparent);
+  backdrop-filter:blur(30px) saturate(150%);
+  -webkit-backdrop-filter:blur(30px) saturate(150%);
+  box-shadow:0 26px 60px -18px rgba(0,0,0,.75), inset 0 1px 0 color-mix(in srgb, var(--ink) 16%, transparent);
+}
+[data-style="glass"] .overlay{background:rgba(2,6,10,.72);backdrop-filter:blur(6px)}
+[data-style="glass"] .modal .field input,
+[data-style="glass"] .modal .field select,
+[data-style="glass"] .modal .seg,
+[data-style="glass"] .modal input[type=color],
+[data-style="glass"] .prevwrap,
+[data-style="glass"] .carrylist{
+  background:color-mix(in srgb, var(--ink) 12%, transparent);
+  border:1px solid color-mix(in srgb, var(--ink) 26%, transparent);
+}
+[data-style="glass"] .modal .seg button.on{background:var(--cyan);color:var(--accent-ink)}
+[data-style="glass"] .setrow{border-bottom:1px solid color-mix(in srgb, var(--ink) 18%, transparent)}
+[data-style="glass"] .modal .sd{color:var(--ink);opacity:.72}
 
 /* ---------- NEO (neumorphism) ---------- */
 [data-style="neo"]{--radius:20px}
@@ -670,6 +704,7 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 /* ---------- BRUTAL (neo-brutalism) ---------- */
 [data-style="brutal"]{--radius:4px;--grid-line:transparent}
 [data-style="brutal"] body{background-image:none}
+/* surfaces stay flat — only clickable things get the offset layer */
 [data-style="brutal"] .panel,
 [data-style="brutal"] .modal,
 [data-style="brutal"] .login-card,
@@ -679,9 +714,8 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 [data-style="brutal"] .toast,
 [data-style="brutal"] .undobar{
   background:var(--panel-solid);backdrop-filter:none;border-radius:4px;
-  border:2px solid var(--ink-strong);box-shadow:6px 6px 0 var(--cyan);
+  border:2px solid var(--ink-strong);box-shadow:none;
 }
-[data-style="brutal"] .stat{box-shadow:4px 4px 0 var(--cyan)}
 [data-style="brutal"] .stat::after{display:none}
 [data-style="brutal"] .btn,[data-style="brutal"] .gearbtn,[data-style="brutal"] .daytab{
   border:2px solid var(--ink-strong);border-radius:4px;box-shadow:3px 3px 0 var(--ink-strong);
@@ -696,9 +730,15 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 [data-style="brutal"] .prevwrap,[data-style="brutal"] .carrylist,[data-style="brutal"] .gtrack{
   border:2px solid var(--ink-strong);border-radius:4px;box-shadow:none;background:var(--panel-2);
 }
-[data-style="brutal"] .icon-btn,[data-style="brutal"] .chip,[data-style="brutal"] .bsitem,[data-style="brutal"] .lgitem,
-[data-style="brutal"] .bpill,[data-style="brutal"] .status-sel{
+/* static labels: outline only */
+[data-style="brutal"] .chip,[data-style="brutal"] .bsitem,[data-style="brutal"] .lgitem,
+[data-style="brutal"] .bpill{
+  border:1.5px solid var(--ink-strong);border-radius:3px;box-shadow:none}
+/* interactive: offset layer */
+[data-style="brutal"] .icon-btn,[data-style="brutal"] .status-sel,[data-style="brutal"] .chip.clickable{
   border:1.5px solid var(--ink-strong);border-radius:3px;box-shadow:2px 2px 0 var(--ink-strong)}
+[data-style="brutal"] .icon-btn:hover,[data-style="brutal"] .chip.clickable:hover{
+  transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink-strong)}
 [data-style="brutal"] .seg{border:2px solid var(--ink-strong);border-radius:4px;box-shadow:2px 2px 0 var(--ink-strong)}
 [data-style="brutal"] .sheet th{background:var(--cyan);color:var(--accent-ink);border-bottom:2px solid var(--ink-strong)}
 [data-style="brutal"] .login-card::after{display:none}
