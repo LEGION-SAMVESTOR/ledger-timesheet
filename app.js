@@ -105,14 +105,17 @@ function themeSprites(){
   return ups.concat(urls).slice(0,4);
 }
 function applyToonImages(){
-  const imgs = themeSprites();
+  const imgs = settings.style==="toon" ? themeSprites() : [];
+  const fx = $("bgFx");
+  fx.classList.toggle("sprites", imgs.length>0);
   document.querySelectorAll("#bgFx span").forEach((sp,i)=>{
-    if(settings.style==="toon" && imgs[i]){
+    if(imgs[i]){
       sp.style.backgroundImage = `url("${imgs[i]}")`;
-      sp.classList.add("has-img");
+      sp.classList.add("has-img"); sp.classList.remove("no-img");
     } else {
       sp.style.backgroundImage = "";
       sp.classList.remove("has-img");
+      sp.classList.toggle("no-img", imgs.length>0);
     }
   });
 }
