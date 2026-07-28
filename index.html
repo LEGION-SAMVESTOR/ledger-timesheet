@@ -47,6 +47,7 @@
   </header>
 
   <div class="daytabs" id="dayTabs"></div>
+  <button class="btn small carrybtn" id="carryBtn" style="display:none">⟲ Carry over unfinished</button>
 
   <div class="panel">
     <div class="addbar" id="addBar">
@@ -62,8 +63,8 @@
       <div class="field"><label>Project</label><input id="fProject" list="projectList" placeholder="Review Section"><datalist id="projectList"></datalist></div>
       <div class="field"><label>Status</label>
         <select id="fStatus">
-          <option>Done</option><option>Pending</option><option>Preview Sent</option><option>Live</option>
-          <option>Paused</option><option>Cancelled</option><option>In Progress</option>
+          <option selected>In Progress</option><option>Done</option><option>Pending</option>
+          <option>Preview Sent</option><option>Live</option><option>Paused</option><option>Cancelled</option>
         </select>
       </div>
       <button class="btn pri" id="addBtn" type="button">+ Add</button>
@@ -145,6 +146,18 @@
       <div class="seg" id="themeSeg">
         <button type="button" data-th="dark">DARK</button>
         <button type="button" data-th="light">LIGHT</button>
+        <button type="button" data-th="custom">CUSTOM</button>
+      </div>
+    </div>
+    <div class="setrow customrow" id="customRow">
+      <div><div class="sl">Custom palette</div><div class="sd">Your own colours — applies when theme is CUSTOM</div></div>
+      <div class="swatches">
+        <label title="Background"><input type="color" id="cBg"><span>BG</span></label>
+        <label title="Panels / cards"><input type="color" id="cSurface"><span>Surface</span></label>
+        <label title="Text"><input type="color" id="cText"><span>Text</span></label>
+        <label title="Muted text"><input type="color" id="cMuted"><span>Muted</span></label>
+        <label title="Accent"><input type="color" id="cAccent"><span>Accent</span></label>
+        <button type="button" class="btn small" id="cReset">Reset</button>
       </div>
     </div>
     <div class="setrow">
@@ -219,11 +232,25 @@
     <h3>Time gaps</h3>
     <p class="phint" id="gapsSummary"></p>
     <div class="gchart" id="gapsChart"></div>
+    <div class="glegend" id="gapsLegend"></div>
     <div class="prevwrap" style="margin-top:12px"><table class="prevtable" id="gapsTable"></table></div>
     <div class="mbtns" style="margin-top:14px">
       <button type="button" class="btn pri small" id="gapsClose">Done</button>
     </div>
   </div>
+</div>
+
+<!-- carry over modal -->
+<div class="overlay" id="carryOverlay">
+  <form class="modal" id="carryModal">
+    <h3>Carry over to today</h3>
+    <p class="phint" id="carryHint"></p>
+    <div class="carrylist" id="carryList"></div>
+    <div class="mbtns">
+      <button type="button" class="btn small" id="carryCancel">Not now</button>
+      <button type="submit" class="btn pri small">Add selected</button>
+    </div>
+  </form>
 </div>
 
 <!-- assign gap modal -->

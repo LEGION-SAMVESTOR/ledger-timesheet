@@ -15,7 +15,7 @@ const BRANDS = [
   {v:"SV",  label:"SV",  cls:"b-SV"},
 ];
 const DEFAULT_ENTRIES = [
-  {project:"Meeting",     task:"FNR, Other Meetings"},
+  {project:"Meeting",     task:""},
   {project:"Discussions", task:""},
   {project:"Upskilling",  task:""},
   {project:"Research",    task:""},
@@ -58,8 +58,47 @@ async function hash(str){
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2600); }
 
 /* ---------- settings ---------- */
-const SET_DEFAULTS = {theme:"dark", accent:"cyan", font:"mono", fsize:"m", density:"comfy", seed:true, remind:true, remindMins:30, target:8};
+const PALETTE_DEFAULT = {bg:"#07090d", surface:"#101620", text:"#dbe7f0", muted:"#6d7f8f", accent:"#38e1ff"};
+const SET_DEFAULTS = {theme:"dark", accent:"cyan", font:"mono", fsize:"m", density:"comfy", seed:true, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
 let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(LS_SET) || "{}"));
+settings.palette = Object.assign({}, PALETTE_DEFAULT, settings.palette||{});
+
+/* ---------- custom palette ---------- */
+const CUSTOM_VARS = ["--bg","--panel","--panel-solid","--panel-2","--ink","--ink-strong","--ink-soft",
+  "--line","--line-strong","--cyan","--cyan-dim","--accent-ink","--grid-line","--bg-glow1","--bg-glow2"];
+function hexRgb(h){
+  h = (h||"").replace("#","");
+  if(h.length===3) h = h.split("").map(c=>c+c).join("");
+  const n = parseInt(h||"000000",16);
+  return [(n>>16)&255,(n>>8)&255,n&255];
+}
+const rgba = (hex,a)=>{ const [r,g,b]=hexRgb(hex); return `rgba(${r},${g},${b},${a})`; };
+const luma = hex=>{ const [r,g,b]=hexRgb(hex); return (0.299*r+0.587*g+0.114*b)/255; };
+function applyPalette(){
+  const de = document.documentElement, p = settings.palette;
+  if(settings.theme !== "custom"){ CUSTOM_VARS.forEach(v=>de.style.removeProperty(v)); return; }
+  const set = (v,val)=>de.style.setProperty(v,val);
+  set("--bg", p.bg);
+  set("--panel-solid", p.surface);
+  set("--panel", rgba(p.surface,.86));
+  set("--panel-2", rgba(p.text,.045));
+  set("--ink", p.text);
+  set("--ink-strong", p.text);
+  set("--ink-soft", p.muted);
+  set("--line", rgba(p.muted,.28));
+  set("--line-strong", rgba(p.muted,.52));
+  set("--cyan", p.accent);
+  set("--cyan-dim", rgba(p.accent,.14));
+  set("--accent-ink", luma(p.accent) > .55 ? "#07090d" : "#ffffff");
+  set("--grid-line", rgba(p.muted,.10));
+  set("--bg-glow1", rgba(p.accent,.08));
+  set("--bg-glow2", rgba(p.accent,.04));
+}
+const PALETTE_INPUTS = {cBg:"bg", cSurface:"surface", cText:"text", cMuted:"muted", cAccent:"accent"};
+Object.entries(PALETTE_INPUTS).forEach(([id,key])=>{
+  $(id).addEventListener("input", ()=>{ settings.palette[key] = $(id).value; settings.theme="custom"; saveSettings(); });
+});
+$("cReset").onclick = ()=>{ settings.palette = Object.assign({}, PALETTE_DEFAULT); saveSettings(); };
 function saveSettings(){ localStorage.setItem(LS_SET, JSON.stringify(settings)); applySettings(); }
 function applySettings(){
   const de = document.documentElement;
@@ -77,6 +116,8 @@ function applySettings(){
   $("remindSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.rm==="1")===!!settings.remind));
   if(document.activeElement!==$("remindMins")) $("remindMins").value = settings.remindMins;
   if(document.activeElement!==$("targetHrs")) $("targetHrs").value = settings.target;
+  Object.entries(PALETTE_INPUTS).forEach(([id,key])=>{ if(document.activeElement!==$(id)) $(id).value = settings.palette[key]; });
+  applyPalette();
 }
 $("targetHrs") && $("targetHrs").addEventListener("change", ()=>{
   const v = parseFloat($("targetHrs").value);
@@ -139,7 +180,7 @@ function remindPing(t){
 /* ---------- storage ---------- */
 let user=null, store=null, viewDay=null, curBrand="", prevDay=null;
 const dataKey = () => "ledger.data." + user;
-function newEntry(o){ return Object.assign({brand:"",project:"",task:"",status:"Done",sessions:[],live:null,manualHours:null,isDefault:false}, o); }
+function newEntry(o){ return Object.assign({brand:"",project:"",task:"",status:"In Progress",sessions:[],live:null,manualHours:null,isDefault:false}, o); }
 function migrate(){
   for(const day of Object.values(store.days)){
     for(const t of day){
@@ -147,6 +188,8 @@ function migrate(){
       if(t.isDefault===undefined) t.isDefault=false;
       if(t.live && typeof t.live==="string") t.live={task:t.task||"",start:t.live};
       if(!t.isDefault && isDefaultEntry(t)) t.isDefault=true;
+      // the old seeded Meeting note is no longer wanted
+      if(t.isDefault && t.task==="FNR, Other Meetings") t.task="";
       (t.sessions||[]).forEach(s=>{ if(s.task===undefined) s.task=t.task||""; });
     }
   }
@@ -248,6 +291,7 @@ function enter(name){
   viewDay = todayKey();
   buildBrandMenu();
   render();
+  maybePromptCarry();
   if(settings.remind && "Notification" in window && Notification.permission==="default") Notification.requestPermission();
   setInterval(tick, 1000);
   tick();
@@ -267,7 +311,7 @@ function buildBrandMenu(){
 $("brandBtn").onclick = e=>{ e.stopPropagation(); $("brandDD").classList.toggle("open"); };
 document.addEventListener("click", e=>{ if(!$("brandDD").contains(e.target)) $("brandDD").classList.remove("open"); });
 document.addEventListener("keydown", e=>{
-  if(e.key==="Escape"){ $("brandDD").classList.remove("open"); closeBlock(); $("editOverlay").classList.remove("show"); $("setOverlay").classList.remove("show"); $("prevOverlay").classList.remove("show"); $("gapsOverlay").classList.remove("show"); $("assignOverlay").classList.remove("show"); }
+  if(e.key==="Escape"){ $("brandDD").classList.remove("open"); closeBlock(); $("editOverlay").classList.remove("show"); $("setOverlay").classList.remove("show"); $("prevOverlay").classList.remove("show"); $("gapsOverlay").classList.remove("show"); $("assignOverlay").classList.remove("show"); $("carryOverlay").classList.remove("show"); }
 });
 
 /* ---------- undo (20s window to resume a stopped task and run both) ---------- */
@@ -419,10 +463,64 @@ $("editModal").addEventListener("submit", e=>{
   save(); $("editOverlay").classList.remove("show"); renderTable();
 });
 
+/* ---------- carry over unfinished work from the last worked day ---------- */
+const CARRY_SKIP = ["Done","Cancelled"];
+function carryCandidates(){
+  const prevList = (prevDay && store.days[prevDay]) || [];
+  const today = store.days[todayKey()] || [];
+  const key = t => (t.brand||"")+"::"+(t.project||"").trim().toLowerCase();
+  const existing = new Set(today.map(key));
+  return prevList.filter(t=>!isDefaultEntry(t) && !CARRY_SKIP.includes(t.status) && !existing.has(key(t)));
+}
+function updateCarryBtn(){
+  const n = viewDay===todayKey() ? carryCandidates().length : 0;
+  $("carryBtn").style.display = n ? "inline-block" : "none";
+  $("carryBtn").textContent = `⟲ Carry over ${n} unfinished`;
+}
+function openCarry(){
+  const cands = carryCandidates();
+  if(!cands.length){ toast("Nothing unfinished to carry over"); return; }
+  $("carryHint").innerHTML = `Still open on <b>${fmtDate(prevDay)}</b>. Ticked items are added to today as fresh entries — timeblocks stay on their original day.`;
+  $("carryList").innerHTML = cands.map((t,k)=>
+    `<label class="carryitem">
+      <input type="checkbox" data-carry="${k}" checked>
+      <span class="bpill ${brandCls(t.brand)}">${t.brand?esc(t.brand):"Default Task"}</span>
+      <span class="ci-main">
+        <span class="ci-proj">${esc(t.project||"—")}</span>
+        ${t.task?`<span class="ci-sub">${esc(t.task)}</span>`:""}
+      </span>
+      <span class="status-sel ${STATUSES[t.status]||""}" style="pointer-events:none">${esc(t.status)}</span>
+    </label>`).join("");
+  $("carryList")._cands = cands;
+  $("carryOverlay").classList.add("show");
+}
+$("carryBtn").onclick = openCarry;
+$("carryCancel").onclick = ()=>$("carryOverlay").classList.remove("show");
+$("carryOverlay").addEventListener("mousedown", e=>{ if(e.target===$("carryOverlay")) $("carryOverlay").classList.remove("show"); });
+$("carryModal").addEventListener("submit", e=>{
+  e.preventDefault();
+  const cands = $("carryList")._cands || [];
+  const picked = [...$("carryList").querySelectorAll("[data-carry]")].filter(c=>c.checked).map(c=>cands[+c.dataset.carry]);
+  picked.forEach(t=>store.days[todayKey()].push(newEntry({brand:t.brand, project:t.project, task:t.task, status:t.status})));
+  store.carriedFor = todayKey();
+  save();
+  $("carryOverlay").classList.remove("show");
+  if(picked.length){ viewDay = todayKey(); render(); toast(`${picked.length} task${picked.length>1?"s":""} carried over`); }
+});
+// offer once per day, when today has nothing of its own yet
+function maybePromptCarry(){
+  if(store.carriedFor === todayKey()) return;
+  const today = store.days[todayKey()] || [];
+  if(today.some(t=>!isDefaultEntry(t))) return;
+  if(!carryCandidates().length) return;
+  store.carriedFor = todayKey(); save();
+  setTimeout(openCarry, 700);
+}
+
 /* ---------- rendering ---------- */
 function render(){
   $("hdrDate").textContent = fmtDate(viewDay) + (viewDay===todayKey() ? " · TODAY" : "");
-  renderTabs(); renderTable(); renderDatalists();
+  renderTabs(); renderTable(); renderDatalists(); updateCarryBtn();
   $("addBar").style.opacity = viewDay===todayKey() ? 1 : .45;
 }
 function renderTabs(){
@@ -789,41 +887,52 @@ $("gapsBtn").onclick = ()=>{
     `Window <b>${secToHM(dayStart)} → ${secToHM(dayEnd)}</b> (${fmtMin(span/60)}) · ` +
     `coverage <span class="cov-pct">${covPct}%</span> · ` +
     (realGaps.length ? `<span class="gap-dur">${realGaps.length} gap${realGaps.length>1?"s":""} · ${fmtMin(gapSec/60)} untracked</span>` : `<span class="cov-pct">no gaps — fully tracked ✓</span>`);
-  // ---- gantt: one lane per entry, each entry its own colour ----
+  // ---- single-track gantt: every block on one bar, one colour per task ----
   const pos = s => (s-dayStart)/span*100;
   const liveNow = hhmmss(new Date());
-  // hour gridlines + axis labels
   let ticks = "", axis = "";
   for(let s = Math.ceil(dayStart/3600)*3600; s < dayEnd; s += 3600){
     ticks += `<div class="tick" style="left:${pos(s)}%"></div>`;
     axis  += `<span class="atick" style="left:${pos(s)}%">${secToHM(s)}</span>`;
   }
-  let rows = `<div class="grow gaxis"><div class="glabel">${secToHM(dayStart)} → ${secToHM(dayEnd)}${viewDay===todayKey()?" (now)":""}</div><div class="gtrack">${axis}</div></div>`;
+  // collect every block, tagged with its entry's colour
+  const items = [];
+  const legend = [];
   let c = 0;
   orderedIndices(list).forEach(i=>{
     const t = list[i];
-    const blocks = t.sessions.map(s=>[s.task, toSec(s.start), toSec(s.end), false])
-      .concat(t.live ? [[t.live.task, toSec(t.live.start), toSec(liveNow), true]] : [])
-      .filter(b=>b[1]!=null && b[2]>b[1]);
+    const blocks = t.sessions.map(s=>({lbl:s.task, a:toSec(s.start), b:toSec(s.end), live:false}))
+      .concat(t.live ? [{lbl:t.live.task, a:toSec(t.live.start), b:toSec(liveNow), live:true}] : [])
+      .filter(b=>b.a!=null && b.b>b.a);
     if(!blocks.length) return;
     const col = GANTT_COLORS[c++ % GANTT_COLORS.length];
-    const mins = Math.round(blocks.reduce((a,b)=>a+(b[2]-b[1]),0)/60);
-    rows += `<div class="grow">
-      <div class="glabel" title="${esc((t.brand||"Default Task")+" · "+(t.project||""))}">
-        <span class="gdot" style="background:${col}"></span>${esc(t.project||t.brand||"—")} <span class="gsub">${fmtMin(mins)}</span>
-      </div>
-      <div class="gtrack">${ticks}${blocks.map(([lbl,a,b,isLive])=>
-        `<div class="gblk ${isLive?"livegblk":""}" style="left:${pos(a)}%;width:${Math.max(0.4,(b-a)/span*100)}%;background:${col}${isLive?";box-shadow:0 0 0 1.5px var(--red)":""}" title="${esc(lbl||t.project||"block")} · ${secToHM(a)}–${secToHM(b)} · ${fmtMin((b-a)/60)}"><span class="gtxt">${esc(lbl||"")}</span></div>`
-      ).join("")}</div>
-    </div>`;
+    const mins = Math.round(blocks.reduce((a,b)=>a+(b.b-b.a),0)/60);
+    legend.push({col, project:t.project||t.brand||"—", mins});
+    blocks.forEach(b=>items.push(Object.assign({col, project:t.project, brand:t.brand}, b)));
   });
-  rows += `<div class="grow gapsrow">
-    <div class="glabel"><span class="gdot" style="background:repeating-linear-gradient(-45deg,var(--red) 0 3px,transparent 3px 6px);box-shadow:inset 0 0 0 1px var(--red)"></span>Gaps <span class="gsub">${realGaps.length?fmtMin(gapSec/60):"none"}</span></div>
-    <div class="gtrack">${ticks}${realGaps.map(([a,b])=>
-      `<div class="gblk gapblk" style="left:${pos(a)}%;width:${Math.max(0.4,(b-a)/span*100)}%" title="gap ${secToHM(a)}–${secToHM(b)} · ${fmtMin((b-a)/60)}"><span class="gtxt">${(b-a)>=900?fmtMin((b-a)/60):""}</span></div>`
-    ).join("")}</div>
-  </div>`;
-  $("gapsChart").innerHTML = rows;
+  // greedy stacking so overlapping blocks stay visible without leaving the single track
+  items.sort((x,y)=>x.a-y.a);
+  const laneEnds = [];
+  items.forEach(it=>{
+    let ln = laneEnds.findIndex(e=>e<=it.a);
+    if(ln<0){ ln = laneEnds.length; laneEnds.push(0); }
+    laneEnds[ln] = it.b;
+    it.lane = ln;
+  });
+  const lanes = Math.max(1, laneEnds.length);
+  const laneH = 100/lanes;
+  const blkHtml = items.map(it=>{
+    const tip = `${it.project||it.brand||"Task"}${it.lbl?" — "+it.lbl:""}\n${secToHM(it.a)} – ${secToHM(it.b)}${it.live?" (running)":""} · ${fmtMin((it.b-it.a)/60)}`;
+    return `<div class="gblk ${it.live?"livegblk":""}" title="${esc(tip)}" style="left:${pos(it.a)}%;width:${Math.max(0.35,(it.b-it.a)/span*100)}%;background:${it.col};top:calc(${it.lane*laneH}% + 3px);height:calc(${laneH}% - 6px)"><span class="gtxt">${esc(it.lbl||it.project||"")}</span></div>`;
+  }).join("");
+  const gapHtml = realGaps.map(([a,b])=>
+    `<div class="gblk gapblk" title="${esc(`Untracked gap\n${secToHM(a)} – ${secToHM(b)} · ${fmtMin((b-a)/60)}`)}" style="left:${pos(a)}%;width:${Math.max(0.35,(b-a)/span*100)}%;top:3px;bottom:3px"><span class="gtxt">${(b-a)>=1200?fmtMin((b-a)/60):""}</span></div>`).join("");
+  $("gapsChart").innerHTML =
+    `<div class="gtrack">${ticks}${gapHtml}${blkHtml}</div>` +
+    `<div class="gaxisrow">${axis}</div>`;
+  $("gapsLegend").innerHTML = legend.map(l=>
+    `<span class="lgitem"><span class="gdot" style="background:${l.col}"></span><b>${esc(l.project)}</b> ${fmtMin(l.mins)}</span>`).join("") +
+    (realGaps.length?`<span class="lgitem"><span class="gdot" style="background:repeating-linear-gradient(-45deg,var(--red) 0 3px,transparent 3px 6px);box-shadow:inset 0 0 0 1px var(--red)"></span><b>Gaps</b> ${fmtMin(gapSec/60)}</span>`:"");
   // gap list
   const canAssign = viewDay===todayKey();
   $("gapsTable").innerHTML = `<tr><th>#</th><th>From</th><th>To</th><th>Length</th>${canAssign?"<th></th>":""}</tr>` +
