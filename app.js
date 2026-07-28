@@ -59,9 +59,34 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 
 /* ---------- settings ---------- */
 const PALETTE_DEFAULT = {bg:"#07090d", surface:"#101620", text:"#dbe7f0", muted:"#6d7f8f", accent:"#38e1ff"};
-const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", seed:true, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
+const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", toonImages:{}, bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", seed:true, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
 let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(LS_SET) || "{}"));
 settings.palette = Object.assign({}, PALETTE_DEFAULT, settings.palette||{});
+settings.toonImages = settings.toonImages || {};
+
+/* ---------- background sprites from user-supplied image URLs ---------- */
+function applyToonImages(){
+  const raw = (settings.toonImages && settings.toonImages[settings.toon]) || "";
+  // only plain http(s) links, and no characters that could break out of url("…")
+  const urls = raw.split(/[\n,]+/).map(s=>s.trim())
+    .filter(u=>/^https?:\/\/[^\s"'()\\]+$/i.test(u)).slice(0,4);
+  document.querySelectorAll("#bgFx span").forEach((sp,i)=>{
+    if(settings.style==="toon" && urls[i]){
+      sp.style.backgroundImage = `url("${urls[i]}")`;
+      sp.classList.add("has-img");
+    } else {
+      sp.style.backgroundImage = "";
+      sp.classList.remove("has-img");
+    }
+  });
+}
+$("toonImgs").addEventListener("change", ()=>{
+  settings.toonImages[settings.toon] = $("toonImgs").value;
+  saveSettings();
+  const bad = $("toonImgs").value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean)
+    .filter(u=>!/^https?:\/\/[^\s"'()\\]+$/i.test(u)).length;
+  if(bad) toast(`${bad} line${bad>1?"s":""} ignored — needs a plain http(s) image URL`);
+});
 
 /* ---------- custom palette ---------- */
 const CUSTOM_VARS = ["--bg","--panel","--panel-solid","--panel-2","--ink","--ink-strong","--ink-soft",
@@ -128,7 +153,9 @@ function applySettings(){
   if(document.activeElement!==$("remindMins")) $("remindMins").value = settings.remindMins;
   if(document.activeElement!==$("targetHrs")) $("targetHrs").value = settings.target;
   Object.entries(PALETTE_INPUTS).forEach(([id,key])=>{ if(document.activeElement!==$(id)) $(id).value = settings.palette[key]; });
+  if(document.activeElement!==$("toonImgs")) $("toonImgs").value = settings.toonImages[settings.toon] || "";
   applyPalette();
+  applyToonImages();
 }
 $("targetHrs") && $("targetHrs").addEventListener("change", ()=>{
   const v = parseFloat($("targetHrs").value);
