@@ -133,6 +133,13 @@ select option{background:var(--panel-solid);color:var(--ink)}
 .boot-term .cursor{display:inline-block;width:7px;height:12px;background:var(--cyan);animation:blink 1s steps(1) infinite;vertical-align:-2px}
 .boot-bar{height:3px;background:var(--line);border-radius:99px;overflow:hidden}
 .boot-bar span{display:block;height:100%;width:0;background:var(--cyan);box-shadow:0 0 12px var(--cyan);border-radius:99px;transition:width .18s ease}
+/* alternate loaders — shown only by the design modes that want them */
+.boot-dots{display:none;gap:10px;justify-content:center;margin:6px 0 18px}
+.boot-dots i{width:13px;height:13px;border-radius:50%;background:var(--cyan);display:block;animation:bootbounce 1s ease-in-out infinite}
+.boot-dots i:nth-child(2){animation-delay:.14s}
+.boot-dots i:nth-child(3){animation-delay:.28s}
+@keyframes bootbounce{0%,60%,100%{transform:translateY(0);opacity:.55}30%{transform:translateY(-13px);opacity:1}}
+.boot-label{display:none;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:14px;text-align:center}
 
 /* ---------- login ---------- */
 .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -574,6 +581,80 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
    ============================================================ */
 :root{--neo-lo:rgba(0,0,0,.58);--neo-hi:rgba(255,255,255,.05)}
 [data-theme="light"]{--neo-lo:rgba(30,50,80,.18);--neo-hi:rgba(255,255,255,.95)}
+
+/* ---------- boot screens per design mode ---------- */
+/* GLASS — frosted card, shimmering bar */
+[data-style="glass"] .boot-inner{
+  background:color-mix(in srgb, var(--panel-solid) 46%, transparent);
+  backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);
+  border:1px solid color-mix(in srgb, var(--ink) 16%, transparent);border-radius:22px;
+  padding:34px 32px 30px;text-align:center;
+  box-shadow:0 22px 60px -22px rgba(0,0,0,.6), inset 0 1px 0 color-mix(in srgb, var(--ink) 16%, transparent);
+}
+[data-style="glass"] .boot-term{display:none}
+[data-style="glass"] .boot-dots{display:flex}
+[data-style="glass"] .boot-label{display:block}
+[data-style="glass"] .boot-bar{height:5px;background:color-mix(in srgb, var(--ink) 12%, transparent)}
+[data-style="glass"] .boot-bar span{background:linear-gradient(90deg,color-mix(in srgb,var(--cyan) 40%,transparent),var(--cyan))}
+
+/* NEO — embossed card, inset track */
+[data-style="neo"] .boot-inner{
+  background:var(--bg);border-radius:24px;padding:34px 32px 30px;text-align:center;
+  box-shadow:8px 8px 18px var(--neo-lo), -8px -8px 18px var(--neo-hi);
+}
+[data-style="neo"] .boot-term{display:none}
+[data-style="neo"] .boot-dots{display:flex}
+[data-style="neo"] .boot-dots i{background:var(--cyan);box-shadow:2px 2px 5px var(--neo-lo), -2px -2px 5px var(--neo-hi)}
+[data-style="neo"] .boot-label{display:block}
+[data-style="neo"] .boot-bar{height:10px;background:var(--bg);box-shadow:inset 3px 3px 6px var(--neo-lo), inset -3px -3px 6px var(--neo-hi)}
+[data-style="neo"] .boot-bar span{box-shadow:none;height:100%}
+[data-style="neo"] .boot-logo{animation:none}
+
+/* FLAT — stripped back */
+[data-style="flat"] .boot-inner{text-align:center}
+[data-style="flat"] .boot-term,[data-style="flat"] .boot-dots{display:none}
+[data-style="flat"] .boot-label{display:block;letter-spacing:.3em}
+[data-style="flat"] .boot-logo{animation:none;margin-bottom:14px}
+[data-style="flat"] .boot-bar{height:2px;border-radius:0;background:var(--line)}
+[data-style="flat"] .boot-bar span{box-shadow:none;border-radius:0}
+
+/* BRUTAL — outlined box, chunky stepped bar */
+[data-style="brutal"] .boot-inner{
+  background:var(--panel-solid);border:3px solid var(--ink-strong);border-radius:4px;
+  padding:28px 26px 24px;text-align:left;box-shadow:8px 8px 0 var(--cyan);
+}
+[data-style="brutal"] .boot-term{display:none}
+[data-style="brutal"] .boot-dots{display:flex;justify-content:flex-start}
+[data-style="brutal"] .boot-dots i{border-radius:0;width:16px;height:16px;border:2.5px solid var(--ink-strong);animation-name:bootblink}
+[data-style="brutal"] .boot-label{display:block;text-align:left;font-weight:700;color:var(--ink-strong)}
+[data-style="brutal"] .boot-logo{animation:none}
+[data-style="brutal"] .boot-bar{height:16px;border-radius:0;border:3px solid var(--ink-strong);background:var(--panel-2)}
+[data-style="brutal"] .boot-bar span{
+  border-radius:0;box-shadow:none;
+  background:repeating-linear-gradient(90deg,var(--cyan) 0 12px,var(--panel-2) 12px 16px);
+}
+@keyframes bootblink{0%,60%,100%{opacity:.25}30%{opacity:1}}
+
+/* CARTOON — taped paper card, bouncing ink dots */
+[data-style="toon"] .boot-inner{
+  background:var(--panel-solid);border:3px solid var(--toon-out);border-radius:22px;
+  padding:34px 30px 28px;text-align:center;box-shadow:8px 9px 0 var(--toon-shadow);position:relative;
+}
+[data-style="toon"] .boot-inner::before{
+  content:"";position:absolute;top:-15px;left:32px;width:86px;height:26px;
+  background:repeating-linear-gradient(45deg, var(--cyan) 0 7px, color-mix(in srgb, var(--cyan) 55%, #fff) 7px 14px);
+  border:2.5px solid var(--toon-out);border-radius:4px;transform:rotate(-7deg);
+  box-shadow:2px 2px 0 var(--toon-shadow);
+}
+[data-style="toon"] .boot-term{display:none}
+[data-style="toon"] .boot-dots{display:flex}
+[data-style="toon"] .boot-dots i{width:16px;height:16px;border:2.5px solid var(--toon-out);box-shadow:2px 2px 0 var(--toon-shadow)}
+[data-style="toon"] .boot-dots i:nth-child(2){background:var(--red)}
+[data-style="toon"] .boot-dots i:nth-child(3){background:var(--green)}
+[data-style="toon"] .boot-label{display:block;color:var(--ink);font-weight:600;letter-spacing:.1em}
+[data-style="toon"] .boot-logo{animation:none;font-size:34px}
+[data-style="toon"] .boot-bar{height:14px;border:2.5px solid var(--toon-out);border-radius:99px;background:var(--panel-2)}
+[data-style="toon"] .boot-bar span{box-shadow:none;border-radius:99px}
 
 /* ---------- GLASS ---------- */
 [data-style="glass"]{--radius:20px}

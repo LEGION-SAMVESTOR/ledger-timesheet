@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark" data-accent="cyan" data-font="mono" data-fsize="m">
+<html lang="en" data-theme="dark" data-style="hud" data-bgfx="aurora" data-accent="cyan" data-font="mono" data-fsize="m" data-density="comfy">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +7,35 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Fredoka:wght@400;500;600;700&family=Luckiest+Guy&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script>
+/* Apply saved look before first paint so the boot screen never flashes the defaults.
+   The custom-palette block mirrors applyPalette() in app.js. */
+(function(){
+  try{
+    var s = JSON.parse(localStorage.getItem("ledger.settings") || "{}"), d = document.documentElement;
+    d.dataset.theme  = s.theme  || "dark";
+    d.dataset.style  = s.style  || "hud";
+    d.dataset.bgfx   = s.bgfx   || "aurora";
+    d.dataset.accent = s.accent || "cyan";
+    d.dataset.font   = s.font   || "mono";
+    d.dataset.fsize  = s.fsize  || "m";
+    d.dataset.density= s.density|| "comfy";
+    if(s.theme === "custom" && s.palette){
+      var p = s.palette, st = d.style;
+      var hx = function(h){ h=(h||"").replace("#",""); if(h.length===3) h=h.split("").map(function(c){return c+c}).join("");
+                            var n=parseInt(h||"0",16); return [(n>>16)&255,(n>>8)&255,n&255]; };
+      var rg = function(h,a){ var c=hx(h); return "rgba("+c[0]+","+c[1]+","+c[2]+","+a+")"; };
+      var lu = function(h){ var c=hx(h); return (0.299*c[0]+0.587*c[1]+0.114*c[2])/255; };
+      st.setProperty("--bg",p.bg); st.setProperty("--panel-solid",p.surface);
+      st.setProperty("--panel",rg(p.surface,.86)); st.setProperty("--panel-2",rg(p.text,.045));
+      st.setProperty("--ink",p.text); st.setProperty("--ink-strong",p.text); st.setProperty("--ink-soft",p.muted);
+      st.setProperty("--line",rg(p.muted,.28)); st.setProperty("--line-strong",rg(p.muted,.52));
+      st.setProperty("--cyan",p.accent); st.setProperty("--cyan-dim",rg(p.accent,.14));
+      st.setProperty("--accent-ink", lu(p.accent) > .55 ? "#07090d" : "#ffffff");
+    }
+  }catch(e){}
+})();
+</script>
 </head>
 <body>
 
@@ -16,6 +45,8 @@
   <div class="boot-inner">
     <div class="boot-logo">LEDGER<span class="tick">_</span></div>
     <div class="boot-term" id="bootTerm"></div>
+    <div class="boot-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="boot-label">Loading your day</div>
     <div class="boot-bar"><span id="bootFill"></span></div>
   </div>
 </div>
