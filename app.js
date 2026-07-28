@@ -59,13 +59,14 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 
 /* ---------- settings ---------- */
 const PALETTE_DEFAULT = {bg:"#07090d", surface:"#101620", text:"#dbe7f0", muted:"#6d7f8f", accent:"#38e1ff"};
-const SET_DEFAULTS = {theme:"dark", accent:"cyan", font:"mono", fsize:"m", density:"comfy", seed:true, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
+const SET_DEFAULTS = {theme:"dark", style:"hud", accent:"cyan", font:"mono", fsize:"m", density:"comfy", seed:true, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
 let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(LS_SET) || "{}"));
 settings.palette = Object.assign({}, PALETTE_DEFAULT, settings.palette||{});
 
 /* ---------- custom palette ---------- */
 const CUSTOM_VARS = ["--bg","--panel","--panel-solid","--panel-2","--ink","--ink-strong","--ink-soft",
-  "--line","--line-strong","--cyan","--cyan-dim","--accent-ink","--grid-line","--bg-glow1","--bg-glow2"];
+  "--line","--line-strong","--cyan","--cyan-dim","--accent-ink","--grid-line","--bg-glow1","--bg-glow2",
+  "--neo-lo","--neo-hi"];
 function hexRgb(h){
   h = (h||"").replace("#","");
   if(h.length===3) h = h.split("").map(c=>c+c).join("");
@@ -93,6 +94,10 @@ function applyPalette(){
   set("--grid-line", rgba(p.muted,.10));
   set("--bg-glow1", rgba(p.accent,.08));
   set("--bg-glow2", rgba(p.accent,.04));
+  // neumorphism relief has to follow whether the custom background is light or dark
+  const light = luma(p.bg) > .5;
+  set("--neo-lo", light ? rgba(p.muted,.30) : "rgba(0,0,0,.58)");
+  set("--neo-hi", light ? "rgba(255,255,255,.95)" : rgba(p.text,.06));
 }
 const PALETTE_INPUTS = {cBg:"bg", cSurface:"surface", cText:"text", cMuted:"muted", cAccent:"accent"};
 Object.entries(PALETTE_INPUTS).forEach(([id,key])=>{
@@ -103,12 +108,14 @@ function saveSettings(){ localStorage.setItem(LS_SET, JSON.stringify(settings));
 function applySettings(){
   const de = document.documentElement;
   de.dataset.theme = settings.theme;
+  de.dataset.style = settings.style;
   de.dataset.accent = settings.accent;
   de.dataset.font = settings.font;
   de.dataset.fsize = settings.fsize;
   de.dataset.density = settings.density;
   $("densitySeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.dn===settings.density));
   $("themeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.th===settings.theme));
+  $("styleSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.sy===settings.style));
   $("fontSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.fn===settings.font));
   $("sizeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.fs===settings.fsize));
   $("accentDots").querySelectorAll(".dot").forEach(b=>b.classList.toggle("on", b.dataset.ac===settings.accent));
@@ -124,6 +131,7 @@ $("targetHrs") && $("targetHrs").addEventListener("change", ()=>{
   if(v>0){ settings.target=v; saveSettings(); if(store) renderTable(); } else applySettings();
 });
 $("themeSeg").addEventListener("click", e=>{ if(e.target.dataset.th){ settings.theme=e.target.dataset.th; saveSettings(); }});
+$("styleSeg").addEventListener("click", e=>{ if(e.target.dataset.sy){ settings.style=e.target.dataset.sy; saveSettings(); }});
 $("fontSeg").addEventListener("click", e=>{ if(e.target.dataset.fn){ settings.font=e.target.dataset.fn; saveSettings(); }});
 $("sizeSeg").addEventListener("click", e=>{ if(e.target.dataset.fs){ settings.fsize=e.target.dataset.fs; saveSettings(); }});
 $("densitySeg").addEventListener("click", e=>{ if(e.target.dataset.dn){ settings.density=e.target.dataset.dn; saveSettings(); if(store) renderTable(); }});

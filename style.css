@@ -488,3 +488,153 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
   .modal{padding:20px 18px 16px}
   .login-card{padding:38px 24px 28px}
 }
+
+/* ============================================================
+   DESIGN MODES — surface treatments, orthogonal to the theme
+   ============================================================ */
+:root{--neo-lo:rgba(0,0,0,.58);--neo-hi:rgba(255,255,255,.05)}
+[data-theme="light"]{--neo-lo:rgba(30,50,80,.18);--neo-hi:rgba(255,255,255,.95)}
+
+/* ---------- GLASS ---------- */
+[data-style="glass"]{--radius:20px}
+[data-style="glass"] body{background-attachment:fixed}
+[data-style="glass"] .panel,
+[data-style="glass"] .modal,
+[data-style="glass"] .login-card,
+[data-style="glass"] .stat,
+[data-style="glass"] .branddd-menu,
+[data-style="glass"] .hovercard,
+[data-style="glass"] .toast,
+[data-style="glass"] .undobar,
+[data-style="glass"] .gearbtn,
+[data-style="glass"] .daytab{
+  background:color-mix(in srgb, var(--panel-solid) 42%, transparent);
+  backdrop-filter:blur(22px) saturate(150%);
+  -webkit-backdrop-filter:blur(22px) saturate(150%);
+  border:1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  box-shadow:0 18px 46px -20px rgba(0,0,0,.55), inset 0 1px 0 color-mix(in srgb, var(--ink) 14%, transparent);
+}
+[data-style="glass"] .stat,[data-style="glass"] .gearbtn,[data-style="glass"] .daytab{border-radius:14px}
+[data-style="glass"] .field input,
+[data-style="glass"] .field select,
+[data-style="glass"] .branddd-btn,
+[data-style="glass"] .gtrack,
+[data-style="glass"] .prevwrap,
+[data-style="glass"] .carrylist,
+[data-style="glass"] .chip,
+[data-style="glass"] .bsitem,
+[data-style="glass"] .lgitem{
+  background:color-mix(in srgb, var(--ink) 7%, transparent);
+  border:1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  border-radius:11px;box-shadow:none;
+}
+[data-style="glass"] .btn{backdrop-filter:blur(10px);border-radius:12px}
+[data-style="glass"] .sheet th{background:transparent}
+
+/* ---------- NEO (neumorphism) ---------- */
+[data-style="neo"]{--radius:20px}
+[data-style="neo"] .panel,
+[data-style="neo"] .modal,
+[data-style="neo"] .login-card,
+[data-style="neo"] .stat,
+[data-style="neo"] .gearbtn,
+[data-style="neo"] .daytab,
+[data-style="neo"] .btn,
+[data-style="neo"] .branddd-menu,
+[data-style="neo"] .hovercard,
+[data-style="neo"] .toast,
+[data-style="neo"] .undobar{
+  background:var(--bg);border:none;
+  box-shadow:6px 6px 14px var(--neo-lo), -6px -6px 14px var(--neo-hi);
+}
+[data-style="neo"] .stat,[data-style="neo"] .daytab,[data-style="neo"] .gearbtn{border-radius:16px}
+[data-style="neo"] .btn{border-radius:14px;color:var(--ink-strong)}
+[data-style="neo"] .btn:hover{box-shadow:4px 4px 10px var(--neo-lo), -4px -4px 10px var(--neo-hi);background:var(--bg);color:var(--cyan)}
+[data-style="neo"] .btn:active,
+[data-style="neo"] .daytab.active{box-shadow:inset 4px 4px 9px var(--neo-lo), inset -4px -4px 9px var(--neo-hi)}
+[data-style="neo"] .daytab.active{color:var(--cyan);background:var(--bg)}
+[data-style="neo"] .btn.pri{background:var(--cyan);color:var(--accent-ink);box-shadow:5px 5px 12px var(--neo-lo), -5px -5px 12px var(--neo-hi)}
+[data-style="neo"] .field input,
+[data-style="neo"] .field select,
+[data-style="neo"] .branddd-btn,
+[data-style="neo"] .gtrack,
+[data-style="neo"] .prevwrap,
+[data-style="neo"] .carrylist,
+[data-style="neo"] .chip,
+[data-style="neo"] .bsitem,
+[data-style="neo"] .lgitem,
+[data-style="neo"] .icon-btn{
+  background:var(--bg);border:none;border-radius:12px;
+  box-shadow:inset 3px 3px 7px var(--neo-lo), inset -3px -3px 7px var(--neo-hi);
+}
+[data-style="neo"] .icon-btn{box-shadow:3px 3px 7px var(--neo-lo), -3px -3px 7px var(--neo-hi)}
+[data-style="neo"] .icon-btn:hover{box-shadow:inset 3px 3px 7px var(--neo-lo), inset -3px -3px 7px var(--neo-hi);color:var(--cyan)}
+[data-style="neo"] .sheet th{background:transparent;border-bottom:none}
+[data-style="neo"] .sheet td{border-bottom:1px solid color-mix(in srgb, var(--ink) 7%, transparent)}
+[data-style="neo"] .seg{border:none;box-shadow:inset 3px 3px 7px var(--neo-lo), inset -3px -3px 7px var(--neo-hi);border-radius:12px;padding:2px}
+[data-style="neo"] .seg button{border-radius:10px}
+[data-style="neo"] .seg button.on{box-shadow:2px 2px 6px var(--neo-lo), -2px -2px 6px var(--neo-hi)}
+
+/* ---------- FLAT ---------- */
+[data-style="flat"]{--radius:8px;--shadow:none;--grid-line:transparent}
+[data-style="flat"] body{background-image:none}
+[data-style="flat"] .panel,
+[data-style="flat"] .modal,
+[data-style="flat"] .login-card,
+[data-style="flat"] .stat,
+[data-style="flat"] .branddd-menu,
+[data-style="flat"] .hovercard,
+[data-style="flat"] .toast,
+[data-style="flat"] .undobar,
+[data-style="flat"] .gearbtn,
+[data-style="flat"] .daytab{
+  background:var(--panel-solid);backdrop-filter:none;
+  border:1px solid var(--line);box-shadow:none;border-radius:8px;
+}
+[data-style="flat"] .btn,[data-style="flat"] .icon-btn,[data-style="flat"] .chip,
+[data-style="flat"] .field input,[data-style="flat"] .field select,[data-style="flat"] .branddd-btn{
+  border-radius:7px;box-shadow:none;
+}
+[data-style="flat"] .btn.pri{box-shadow:none}
+[data-style="flat"] .stat::after{display:none}
+[data-style="flat"] .login-card::before,[data-style="flat"] .modal::before{background:var(--cyan);box-shadow:none}
+[data-style="flat"] .login-card::after{display:none}
+[data-style="flat"] .daytab.active{box-shadow:none}
+
+/* ---------- BRUTAL (neo-brutalism) ---------- */
+[data-style="brutal"]{--radius:4px;--grid-line:transparent}
+[data-style="brutal"] body{background-image:none}
+[data-style="brutal"] .panel,
+[data-style="brutal"] .modal,
+[data-style="brutal"] .login-card,
+[data-style="brutal"] .stat,
+[data-style="brutal"] .branddd-menu,
+[data-style="brutal"] .hovercard,
+[data-style="brutal"] .toast,
+[data-style="brutal"] .undobar{
+  background:var(--panel-solid);backdrop-filter:none;border-radius:4px;
+  border:2px solid var(--ink-strong);box-shadow:6px 6px 0 var(--cyan);
+}
+[data-style="brutal"] .stat{box-shadow:4px 4px 0 var(--cyan)}
+[data-style="brutal"] .stat::after{display:none}
+[data-style="brutal"] .btn,[data-style="brutal"] .gearbtn,[data-style="brutal"] .daytab{
+  border:2px solid var(--ink-strong);border-radius:4px;box-shadow:3px 3px 0 var(--ink-strong);
+  background:var(--panel-solid);color:var(--ink-strong);
+}
+[data-style="brutal"] .btn:hover,[data-style="brutal"] .gearbtn:hover,[data-style="brutal"] .daytab:hover{
+  transform:translate(1px,1px);box-shadow:2px 2px 0 var(--ink-strong);background:var(--cyan);color:var(--accent-ink);
+}
+[data-style="brutal"] .btn:active{transform:translate(3px,3px);box-shadow:none}
+[data-style="brutal"] .btn.pri,[data-style="brutal"] .daytab.active{background:var(--cyan);color:var(--accent-ink);box-shadow:3px 3px 0 var(--ink-strong)}
+[data-style="brutal"] .field input,[data-style="brutal"] .field select,[data-style="brutal"] .branddd-btn,
+[data-style="brutal"] .prevwrap,[data-style="brutal"] .carrylist,[data-style="brutal"] .gtrack{
+  border:2px solid var(--ink-strong);border-radius:4px;box-shadow:none;background:var(--panel-2);
+}
+[data-style="brutal"] .icon-btn,[data-style="brutal"] .chip,[data-style="brutal"] .bsitem,[data-style="brutal"] .lgitem,
+[data-style="brutal"] .bpill,[data-style="brutal"] .status-sel{
+  border:1.5px solid var(--ink-strong);border-radius:3px;box-shadow:2px 2px 0 var(--ink-strong)}
+[data-style="brutal"] .seg{border:2px solid var(--ink-strong);border-radius:4px;box-shadow:2px 2px 0 var(--ink-strong)}
+[data-style="brutal"] .sheet th{background:var(--cyan);color:var(--accent-ink);border-bottom:2px solid var(--ink-strong)}
+[data-style="brutal"] .login-card::after{display:none}
+[data-style="brutal"] .login-card::before,[data-style="brutal"] .modal::before{background:var(--cyan);box-shadow:none;height:4px}
+[data-style="brutal"] h1,[data-style="brutal"] .mast h1,[data-style="brutal"] .login-card h1{letter-spacing:.02em}
