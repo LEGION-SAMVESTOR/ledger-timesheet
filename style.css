@@ -490,6 +490,72 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 }
 
 /* ============================================================
+   ANIMATED BACKGROUNDS
+   ============================================================ */
+.bgfx{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.bgfx span{position:absolute;display:block;opacity:0}
+[data-bgfx="off"] .bgfx{display:none}
+
+/* AURORA — slow drifting colour clouds */
+[data-bgfx="aurora"] .bgfx span{
+  width:60vw;height:60vw;min-width:520px;min-height:520px;border-radius:50%;
+  background:radial-gradient(circle at 50% 50%, var(--cyan) 0%, transparent 62%);
+  filter:blur(70px);opacity:.30;will-change:transform;
+}
+[data-theme="light"][data-bgfx="aurora"] .bgfx span{opacity:.22;filter:blur(80px)}
+[data-bgfx="aurora"] .bgfx span:nth-child(1){top:-22%;left:-14%;animation:drift1 26s ease-in-out infinite alternate}
+[data-bgfx="aurora"] .bgfx span:nth-child(2){top:18%;right:-20%;left:auto;filter:blur(70px) hue-rotate(85deg);animation:drift2 32s ease-in-out infinite alternate}
+[data-bgfx="aurora"] .bgfx span:nth-child(3){bottom:-28%;left:12%;top:auto;filter:blur(70px) hue-rotate(-70deg);animation:drift3 29s ease-in-out infinite alternate}
+[data-bgfx="aurora"] .bgfx span:nth-child(4){bottom:-10%;right:6%;top:auto;left:auto;filter:blur(80px) hue-rotate(160deg);opacity:.20;animation:drift1 36s ease-in-out infinite alternate-reverse}
+@keyframes drift1{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(16vw,10vh,0) scale(1.25)}}
+@keyframes drift2{from{transform:translate3d(0,0,0) scale(1.1)}to{transform:translate3d(-18vw,14vh,0) scale(.9)}}
+@keyframes drift3{from{transform:translate3d(0,0,0) scale(.95)}to{transform:translate3d(20vw,-12vh,0) scale(1.2)}}
+
+/* BEAMS — slow rotating light sweep + horizon glow */
+[data-bgfx="beams"] .bgfx span:nth-child(1){
+  top:50%;left:50%;width:220vmax;height:220vmax;margin:-110vmax 0 0 -110vmax;opacity:.13;
+  background:conic-gradient(from 0deg, transparent 0deg, var(--cyan) 18deg, transparent 40deg,
+    transparent 160deg, var(--cyan) 182deg, transparent 205deg, transparent 360deg);
+  animation:spin 46s linear infinite;will-change:transform;
+}
+[data-bgfx="beams"] .bgfx span:nth-child(2){
+  top:50%;left:50%;width:180vmax;height:180vmax;margin:-90vmax 0 0 -90vmax;opacity:.09;
+  background:conic-gradient(from 90deg, transparent 0deg, var(--cyan) 26deg, transparent 52deg, transparent 360deg);
+  filter:hue-rotate(120deg);animation:spin 68s linear infinite reverse;
+}
+[data-bgfx="beams"] .bgfx span:nth-child(3){
+  left:-10%;right:-10%;bottom:-30%;width:120%;height:70vh;border-radius:50%;opacity:.28;
+  background:radial-gradient(ellipse at 50% 100%, var(--cyan) 0%, transparent 68%);
+  filter:blur(60px);animation:breathe 14s ease-in-out infinite alternate;
+}
+[data-theme="light"][data-bgfx="beams"] .bgfx span{opacity:.10}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes breathe{from{opacity:.16;transform:translateY(4vh)}to{opacity:.34;transform:translateY(-3vh)}}
+
+/* ORBS — crisp floating bubbles */
+[data-bgfx="orbs"] .bgfx span{
+  border-radius:50%;opacity:.5;will-change:transform;
+  background:radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--cyan) 60%, transparent), transparent 60%);
+  box-shadow:inset 0 0 42px color-mix(in srgb, var(--cyan) 26%, transparent);
+  border:1px solid color-mix(in srgb, var(--cyan) 26%, transparent);
+}
+[data-bgfx="orbs"] .bgfx span:nth-child(1){width:230px;height:230px;left:6%;top:12%;animation:float1 22s ease-in-out infinite alternate}
+[data-bgfx="orbs"] .bgfx span:nth-child(2){width:130px;height:130px;right:14%;top:26%;left:auto;filter:hue-rotate(70deg);animation:float2 18s ease-in-out infinite alternate}
+[data-bgfx="orbs"] .bgfx span:nth-child(3){width:320px;height:320px;right:4%;bottom:-6%;top:auto;left:auto;filter:hue-rotate(-60deg);opacity:.35;animation:float3 30s ease-in-out infinite alternate}
+[data-bgfx="orbs"] .bgfx span:nth-child(4){width:90px;height:90px;left:24%;bottom:14%;top:auto;filter:hue-rotate(150deg);animation:float2 25s ease-in-out infinite alternate-reverse}
+@keyframes float1{from{transform:translate(0,0) rotate(0)}to{transform:translate(9vw,-14vh) rotate(40deg)}}
+@keyframes float2{from{transform:translate(0,0)}to{transform:translate(-11vw,12vh)}}
+@keyframes float3{from{transform:translate(0,0) scale(1)}to{transform:translate(-7vw,-9vh) scale(1.14)}}
+
+@media (prefers-reduced-motion: reduce){ .bgfx span{animation:none !important} }
+
+/* glass & neo read best with a touch more separation over motion */
+[data-bgfx]:not([data-bgfx="off"])[data-style="glass"] .panel,
+[data-bgfx]:not([data-bgfx="off"])[data-style="glass"] .modal{
+  background:color-mix(in srgb, var(--panel-solid) 34%, transparent);
+}
+
+/* ============================================================
    DESIGN MODES — surface treatments, orthogonal to the theme
    ============================================================ */
 :root{--neo-lo:rgba(0,0,0,.58);--neo-hi:rgba(255,255,255,.05)}
@@ -638,3 +704,121 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 [data-style="brutal"] .login-card::after{display:none}
 [data-style="brutal"] .login-card::before,[data-style="brutal"] .modal::before{background:var(--cyan);box-shadow:none;height:4px}
 [data-style="brutal"] h1,[data-style="brutal"] .mast h1,[data-style="brutal"] .login-card h1{letter-spacing:.02em}
+
+/* ---------- CARTOON ---------- */
+[data-style="toon"]{
+  --radius:22px;
+  --toon-out:#171226;
+  --toon-shadow:rgba(23,18,38,.9);
+  --bounce:cubic-bezier(.34,1.7,.5,1);
+}
+[data-theme="dark"][data-style="toon"]{--toon-out:#0a0713;--toon-shadow:rgba(0,0,0,.85)}
+[data-style="toon"] h1,[data-style="toon"] h2,[data-style="toon"] h3,
+[data-style="toon"] .disp,[data-style="toon"] .btn,[data-style="toon"] .seg button,
+[data-style="toon"] .bpill,[data-style="toon"] .status-sel,[data-style="toon"] .stat .v,
+[data-style="toon"] .foot .total,[data-style="toon"] .daytab,[data-style="toon"] .field label,
+[data-style="toon"] .sheet th{font-family:"Fredoka",system-ui,sans-serif;letter-spacing:.01em}
+[data-style="toon"] h1,[data-style="toon"] .mast h1,[data-style="toon"] .login-card h1{
+  font-weight:700;letter-spacing:0;
+  text-shadow:3px 3px 0 var(--toon-out);
+}
+[data-style="toon"] body{background-image:none;font-family:"Fredoka",system-ui,sans-serif}
+/* on dark backgrounds the panels lift so the dark outlines actually read */
+[data-theme="dark"][data-style="toon"] .panel,
+[data-theme="dark"][data-style="toon"] .modal,
+[data-theme="dark"][data-style="toon"] .login-card,
+[data-theme="dark"][data-style="toon"] .stat,
+[data-theme="dark"][data-style="toon"] .btn,
+[data-theme="dark"][data-style="toon"] .gearbtn,
+[data-theme="dark"][data-style="toon"] .daytab,
+[data-theme="dark"][data-style="toon"] .branddd-menu,
+[data-theme="dark"][data-style="toon"] .hovercard{
+  background:color-mix(in srgb, var(--panel-solid) 74%, var(--ink) 26%);
+}
+[data-theme="dark"][data-style="toon"] .field input,
+[data-theme="dark"][data-style="toon"] .field select,
+[data-theme="dark"][data-style="toon"] .branddd-btn,
+[data-theme="dark"][data-style="toon"] .gtrack,
+[data-theme="dark"][data-style="toon"] .prevwrap,
+[data-theme="dark"][data-style="toon"] .carrylist{
+  background:color-mix(in srgb, var(--panel-solid) 86%, var(--ink) 14%);
+}
+[data-style="toon"] .panel,
+[data-style="toon"] .modal,
+[data-style="toon"] .login-card,
+[data-style="toon"] .branddd-menu,
+[data-style="toon"] .hovercard,
+[data-style="toon"] .toast,
+[data-style="toon"] .undobar{
+  background:var(--panel-solid);backdrop-filter:none;
+  border:3px solid var(--toon-out);border-radius:22px;
+  box-shadow:0 7px 0 var(--toon-shadow);
+}
+[data-style="toon"] .stat{
+  background:var(--panel-solid);border:3px solid var(--toon-out);border-radius:18px;
+  box-shadow:0 5px 0 var(--toon-shadow);
+}
+[data-style="toon"] .stat::after{display:none}
+[data-style="toon"] .btn,
+[data-style="toon"] .gearbtn,
+[data-style="toon"] .daytab{
+  border:3px solid var(--toon-out);border-radius:999px;
+  background:var(--panel-solid);color:var(--ink-strong);
+  box-shadow:0 5px 0 var(--toon-shadow);
+  transition:transform .18s var(--bounce), box-shadow .18s var(--bounce), background .15s;
+}
+[data-style="toon"] .btn:hover,
+[data-style="toon"] .gearbtn:hover,
+[data-style="toon"] .daytab:hover{
+  transform:translateY(-3px) rotate(-1.2deg);box-shadow:0 8px 0 var(--toon-shadow);
+  background:var(--cyan);color:var(--accent-ink);
+}
+[data-style="toon"] .btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--toon-shadow)}
+[data-style="toon"] .gearbtn{border-radius:50%;width:42px;height:42px}
+[data-style="toon"] .gearbtn:hover{transform:translateY(-3px) rotate(90deg)}
+[data-style="toon"] .btn.pri,
+[data-style="toon"] .daytab.active{background:var(--cyan);color:var(--accent-ink);box-shadow:0 5px 0 var(--toon-out)}
+[data-style="toon"] .field input,
+[data-style="toon"] .field select,
+[data-style="toon"] .branddd-btn,
+[data-style="toon"] .prevwrap,
+[data-style="toon"] .carrylist,
+[data-style="toon"] .gtrack{
+  background:var(--panel-2);border:3px solid var(--toon-out);border-radius:16px;box-shadow:none;
+}
+[data-style="toon"] .field input:focus,
+[data-style="toon"] .field select:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 4px var(--cyan-dim)}
+[data-style="toon"] .icon-btn{
+  border:2.5px solid var(--toon-out);border-radius:12px;color:var(--ink);
+  box-shadow:0 3px 0 var(--toon-shadow);transition:transform .16s var(--bounce), box-shadow .16s var(--bounce);
+}
+[data-style="toon"] .icon-btn:hover{transform:translateY(-2px) scale(1.06);box-shadow:0 5px 0 var(--toon-shadow);background:var(--cyan);color:var(--accent-ink)}
+[data-style="toon"] .bpill,
+[data-style="toon"] .status-sel,
+[data-style="toon"] .chip,
+[data-style="toon"] .bsitem,
+[data-style="toon"] .lgitem{
+  border:2.5px solid var(--toon-out);border-radius:999px;font-weight:600;
+  box-shadow:0 2.5px 0 var(--toon-shadow);
+}
+[data-style="toon"] .chip{border-radius:14px}
+[data-style="toon"] .chip.clickable:hover{transform:translateY(-2px) rotate(-1deg)}
+[data-style="toon"] .seg{border:3px solid var(--toon-out);border-radius:999px;padding:2px;box-shadow:0 3px 0 var(--toon-shadow)}
+[data-style="toon"] .seg button{border-radius:999px}
+[data-style="toon"] .seg button.on{background:var(--cyan);color:var(--accent-ink)}
+[data-style="toon"] .sheet th{
+  background:var(--cyan);color:var(--accent-ink);border-bottom:3px solid var(--toon-out);
+  font-size:10.5px;letter-spacing:.1em;
+}
+[data-style="toon"] .sheet th:first-child{border-top-left-radius:14px}
+[data-style="toon"] .sheet th:last-child{border-top-right-radius:14px}
+[data-style="toon"] .sheet td{border-bottom:2px dashed color-mix(in srgb, var(--ink) 20%, transparent)}
+[data-style="toon"] .sheet tbody tr:hover td{background:var(--cyan-dim)}
+[data-style="toon"] .login-card::after{display:none}
+[data-style="toon"] .login-card::before,[data-style="toon"] .modal::before{
+  height:0;box-shadow:none;background:none;
+}
+[data-style="toon"] .gblk{border:2px solid var(--toon-out);border-radius:9px}
+[data-style="toon"] .tgbar,[data-style="toon"] .hbar{border:2px solid var(--toon-out);border-radius:999px;height:9px;background:var(--panel-2)}
+[data-style="toon"] .hbar{height:6px}
+[data-style="toon"] .boot-logo{text-shadow:3px 3px 0 var(--toon-out)}
