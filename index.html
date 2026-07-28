@@ -47,7 +47,7 @@
     <div class="boot-logo">LEDGER<span class="tick">_</span></div>
     <div class="boot-term" id="bootTerm"></div>
     <div class="boot-dots" aria-hidden="true"><i></i><i></i><i></i></div>
-    <div class="boot-dial" aria-hidden="true"><i class="ring"></i><i class="sweep"></i><i class="core"></i></div>
+    <div class="boot-dial" aria-hidden="true"><i class="ring"></i><i class="face"></i><i class="sweep"></i><i class="core"></i></div>
     <div class="boot-label">Loading your day</div>
     <div class="boot-bar"><span id="bootFill"></span></div>
   </div>
@@ -206,8 +206,15 @@
       </div>
     </div>
     <div class="setrow toonrow">
-      <div><div class="sl">Theme images</div><div class="sd">Optional image URLs for the background — one per line, up to 4</div></div>
-      <textarea id="toonImgs" rows="3" placeholder="https://example.com/art.png" spellcheck="false"></textarea>
+      <div><div class="sl">Theme images</div><div class="sd">Up to 4 per theme, stored in this browser. Uploads are resized to keep storage small.</div></div>
+      <div class="imgpick">
+        <div class="thumbs" id="toonThumbs"></div>
+        <label class="btn small uploadbtn">⤒ Upload<input type="file" id="toonUpload" accept="image/*" multiple hidden></label>
+        <details class="urlfallback">
+          <summary>or paste URLs</summary>
+          <textarea id="toonImgs" rows="2" placeholder="https://example.com/art.png" spellcheck="false"></textarea>
+        </details>
+      </div>
     </div>
     <div class="setrow">
       <div><div class="sl">Animated background</div><div class="sd">Motion behind the panels — lifts glass &amp; neo</div></div>

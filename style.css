@@ -139,37 +139,38 @@ select option{background:var(--panel-solid);color:var(--ink)}
 .boot-dots i:nth-child(2){animation-delay:.14s}
 .boot-dots i:nth-child(3){animation-delay:.28s}
 @keyframes bootbounce{0%,60%,100%{transform:translateY(0);opacity:.55}30%{transform:translateY(-13px);opacity:1}}
-/* Ben 10 style dial — original geometry: notched bezel, sweeping scanner, hex core */
-.boot-dial{display:none;position:relative;width:134px;height:134px;margin:2px auto 20px}
+/* watch-style dial: black bezel, green faceplate, hourglass core, sweeping scanner */
+.boot-dial{display:none;position:relative;width:148px;height:148px;margin:2px auto 20px}
 .boot-dial i{position:absolute;display:block;border-radius:50%}
-.boot-dial .ring{
-  inset:0;border:9px solid var(--toon-out);
-  background:radial-gradient(circle at 50% 46%, #10301f 0 54%, #06170f 100%);
-  box-shadow:0 0 30px rgba(43,255,106,.45), inset 0 0 24px rgba(43,255,106,.4), 5px 6px 0 var(--toon-out);
+.boot-dial .ring{ /* outer black bezel with strap lugs */
+  inset:0;background:#0b0f0d;
+  box-shadow:0 0 34px rgba(43,255,106,.45), inset 0 0 0 3px rgba(43,255,106,.35), 6px 7px 0 rgba(0,0,0,.55);
 }
-.boot-dial .ring::after{ /* bezel notches */
-  content:"";position:absolute;inset:-3px;border-radius:50%;
-  background:repeating-conic-gradient(from 0deg, var(--toon-out) 0 5deg, transparent 5deg 30deg);
-  -webkit-mask:radial-gradient(circle, transparent 70%, #000 71%, #000 82%, transparent 83%);
-  mask:radial-gradient(circle, transparent 70%, #000 71%, #000 82%, transparent 83%);
-  animation:dialBezel 9s linear infinite;
+.boot-dial .ring::before,.boot-dial .ring::after{ /* lugs top & bottom */
+  content:"";position:absolute;left:50%;width:52px;height:26px;margin-left:-26px;
+  background:#0b0f0d;border-radius:7px;
 }
-.boot-dial .sweep{
-  inset:13px;
-  background:conic-gradient(from 0deg, rgba(43,255,106,0) 0deg, rgba(43,255,106,.9) 48deg, rgba(43,255,106,0) 108deg, rgba(43,255,106,0) 360deg);
-  -webkit-mask:radial-gradient(circle, transparent 44%, #000 45%);
-  mask:radial-gradient(circle, transparent 44%, #000 45%);
-  animation:dialSweep 1.4s linear infinite;
+.boot-dial .ring::before{top:-15px}
+.boot-dial .ring::after{bottom:-15px}
+.boot-dial .face{ /* green faceplate */
+  inset:17px;background:radial-gradient(circle at 50% 40%, #35ff77 0%, #0fbe4c 62%, #0a8f39 100%);
+  box-shadow:inset 0 0 22px rgba(0,0,0,.45), 0 0 26px rgba(43,255,106,.55);
 }
-.boot-dial .core{
-  inset:38px;border-radius:0;background:#2bff6a;
-  clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0% 50%);
-  box-shadow:0 0 26px rgba(43,255,106,.95);
-  animation:dialCore 1.4s ease-in-out infinite;
+.boot-dial .sweep{ /* scanner arc riding the faceplate edge */
+  inset:20px;
+  background:conic-gradient(from 0deg, rgba(255,255,255,0) 0deg, rgba(255,255,255,.75) 42deg, rgba(255,255,255,0) 96deg, rgba(255,255,255,0) 360deg);
+  -webkit-mask:radial-gradient(circle, transparent 62%, #000 63%);
+  mask:radial-gradient(circle, transparent 62%, #000 63%);
+  animation:dialSweep 1.5s linear infinite;
+}
+.boot-dial .core{ /* hourglass silhouette */
+  inset:40px;border-radius:0;background:#0b0f0d;
+  clip-path:polygon(4% 0%, 96% 0%, 50% 50%, 96% 100%, 4% 100%, 50% 50%);
+  filter:drop-shadow(0 0 7px rgba(0,0,0,.55));
+  animation:dialCore 1.5s ease-in-out infinite;
 }
 @keyframes dialSweep{to{transform:rotate(360deg)}}
-@keyframes dialBezel{to{transform:rotate(-360deg)}}
-@keyframes dialCore{0%,100%{opacity:.6;transform:scale(.9)}50%{opacity:1;transform:scale(1.08)}}
+@keyframes dialCore{0%,100%{transform:scale(.96)}50%{transform:scale(1.04)}}
 
 /* background sprites from user-supplied image URLs */
 .bgfx span.has-img{
@@ -473,10 +474,22 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 /* ---------- custom palette ---------- */
 .customrow{display:none}
 [data-theme="custom"] .customrow{display:flex}
+.imgpick{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex:0 1 auto}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.thumb{position:relative;width:46px;height:46px;border:1px solid var(--line-strong);border-radius:9px;overflow:hidden;background:var(--panel-2)}
+.thumb img{width:100%;height:100%;object-fit:contain;display:block}
+.thumb button{
+  position:absolute;top:1px;right:1px;width:17px;height:17px;line-height:1;padding:0;
+  border:none;border-radius:50%;background:var(--red);color:#fff;font-size:11px;font-weight:700;
+}
+.thumb button:hover{filter:brightness(1.15)}
+.uploadbtn{cursor:pointer}
+.urlfallback{font-size:10.5px;color:var(--ink-soft);width:100%}
+.urlfallback summary{cursor:pointer;text-align:right;letter-spacing:.06em}
 #toonImgs{
-  flex:1 1 260px;min-width:220px;max-width:340px;resize:vertical;
+  width:100%;min-width:210px;max-width:330px;resize:vertical;margin-top:6px;
   padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);
-  color:var(--ink);font-size:11.5px;line-height:1.5;
+  color:var(--ink);font-size:11px;line-height:1.5;
 }
 .swatches{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .swatches label{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}

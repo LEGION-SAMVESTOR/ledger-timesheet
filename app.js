@@ -64,15 +64,51 @@ let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(L
 settings.palette = Object.assign({}, PALETTE_DEFAULT, settings.palette||{});
 settings.toonImages = settings.toonImages || {};
 
-/* ---------- background sprites from user-supplied image URLs ---------- */
-function applyToonImages(){
+/* ---------- background sprites: uploaded images (+ optional URLs) ----------
+   Uploads live in their own localStorage key so settings stay small and fast
+   to write. Cookies can't be used for this — they cap out around 4 KB. */
+const LS_TOONIMG = "ledger.toonimg";
+let toonImg = {};
+try{ toonImg = JSON.parse(localStorage.getItem(LS_TOONIMG) || "{}"); }catch(e){ toonImg = {}; }
+function saveToonImg(){
+  try{ localStorage.setItem(LS_TOONIMG, JSON.stringify(toonImg)); return true; }
+  catch(e){ toast("Browser storage is full — remove an image and try again"); return false; }
+}
+// shrink to a sane size before storing, otherwise a couple of photos blow the quota
+function shrinkImage(file){
+  return new Promise((res,rej)=>{
+    const fr = new FileReader();
+    fr.onerror = ()=>rej(new Error("read"));
+    fr.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=>rej(new Error("decode"));
+      img.onload = ()=>{
+        const MAX = 480;
+        let w = img.naturalWidth, h = img.naturalHeight;
+        const sc = Math.min(1, MAX/Math.max(w,h));
+        w = Math.max(1,Math.round(w*sc)); h = Math.max(1,Math.round(h*sc));
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img,0,0,w,h);
+        res(c.toDataURL("image/webp",0.82));
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+function themeSprites(){
+  const ups = (toonImg[settings.toon] || []).slice(0,4);
   const raw = (settings.toonImages && settings.toonImages[settings.toon]) || "";
-  // only plain http(s) links, and no characters that could break out of url("…")
   const urls = raw.split(/[\n,]+/).map(s=>s.trim())
-    .filter(u=>/^https?:\/\/[^\s"'()\\]+$/i.test(u)).slice(0,4);
+    .filter(u=>/^https?:\/\/[^\s"'()\\]+$/i.test(u));
+  return ups.concat(urls).slice(0,4);
+}
+function applyToonImages(){
+  const imgs = themeSprites();
   document.querySelectorAll("#bgFx span").forEach((sp,i)=>{
-    if(settings.style==="toon" && urls[i]){
-      sp.style.backgroundImage = `url("${urls[i]}")`;
+    if(settings.style==="toon" && imgs[i]){
+      sp.style.backgroundImage = `url("${imgs[i]}")`;
       sp.classList.add("has-img");
     } else {
       sp.style.backgroundImage = "";
@@ -80,6 +116,30 @@ function applyToonImages(){
     }
   });
 }
+function renderToonThumbs(){
+  const list = toonImg[settings.toon] || [];
+  $("toonThumbs").innerHTML = list.map((src,i)=>
+    `<span class="thumb"><img src="${src}" alt=""><button type="button" data-rmimg="${i}" title="Remove">×</button></span>`).join("");
+  $("toonThumbs").querySelectorAll("[data-rmimg]").forEach(b=>b.onclick=()=>{
+    (toonImg[settings.toon]||[]).splice(+b.dataset.rmimg,1);
+    saveToonImg(); renderToonThumbs(); applyToonImages();
+  });
+}
+$("toonUpload").addEventListener("change", async e=>{
+  const files = [...e.target.files];
+  const list = toonImg[settings.toon] || (toonImg[settings.toon] = []);
+  let added = 0, full = false;
+  for(const f of files){
+    if(list.length >= 4){ full = true; break; }
+    try{ list.push(await shrinkImage(f)); added++; }
+    catch(err){ toast(`Could not read ${f.name}`); }
+  }
+  e.target.value = "";
+  if(added && !saveToonImg()){ list.length = list.length - added; }
+  renderToonThumbs(); applyToonImages();
+  if(full) toast("4 images max per theme");
+  else if(added) toast(`${added} image${added>1?"s":""} added`);
+});
 $("toonImgs").addEventListener("change", ()=>{
   settings.toonImages[settings.toon] = $("toonImgs").value;
   saveSettings();
@@ -155,6 +215,7 @@ function applySettings(){
   Object.entries(PALETTE_INPUTS).forEach(([id,key])=>{ if(document.activeElement!==$(id)) $(id).value = settings.palette[key]; });
   if(document.activeElement!==$("toonImgs")) $("toonImgs").value = settings.toonImages[settings.toon] || "";
   applyPalette();
+  renderToonThumbs();
   applyToonImages();
 }
 $("targetHrs") && $("targetHrs").addEventListener("change", ()=>{
