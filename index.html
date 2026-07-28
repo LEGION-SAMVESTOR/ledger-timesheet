@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark" data-style="hud" data-bgfx="aurora" data-accent="cyan" data-font="mono" data-fsize="m" data-density="comfy">
+<html lang="en" data-theme="dark" data-style="hud" data-bgfx="aurora" data-accent="cyan" data-font="mono" data-fsize="m" data-density="comfy" data-toon="classic">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,6 +20,7 @@
     d.dataset.font   = s.font   || "mono";
     d.dataset.fsize  = s.fsize  || "m";
     d.dataset.density= s.density|| "comfy";
+    d.dataset.toon   = s.toon   || "classic";
     if(s.theme === "custom" && s.palette){
       var p = s.palette, st = d.style;
       var hx = function(h){ h=(h||"").replace("#",""); if(h.length===3) h=h.split("").map(function(c){return c+c}).join("");
@@ -192,6 +193,15 @@
         <button type="button" data-sy="flat">FLAT</button>
         <button type="button" data-sy="brutal">BRUTAL</button>
         <button type="button" data-sy="toon">CARTOON</button>
+      </div>
+    </div>
+    <div class="setrow toonrow" id="toonRow">
+      <div><div class="sl">Cartoon theme</div><div class="sd">Extra palettes — cartoon design only</div></div>
+      <div class="seg" id="toonSeg">
+        <button type="button" data-tn="classic">CLASSIC</button>
+        <button type="button" data-tn="pokemon">POKÉMON</button>
+        <button type="button" data-tn="shinchan">SHINCHAN</button>
+        <button type="button" data-tn="ben10">BEN 10</button>
       </div>
     </div>
     <div class="setrow">

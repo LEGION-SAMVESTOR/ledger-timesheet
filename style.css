@@ -983,3 +983,144 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 [data-style="toon"] .tgbar,[data-style="toon"] .hbar{border:2px solid var(--toon-out);border-radius:999px;height:9px;background:var(--panel-2)}
 [data-style="toon"] .hbar{height:6px}
 [data-style="toon"] .boot-logo{text-shadow:3px 3px 0 var(--toon-out)}
+
+/* ============================================================
+   CARTOON SUB-THEMES — palettes & motifs, cartoon design only
+   ============================================================ */
+.toonrow{display:none}
+[data-style="toon"] .toonrow{display:flex}
+
+/* ---------------- POKEMON: cel-shaded, red / gold / blue ---------------- */
+[data-style="toon"][data-toon="pokemon"]{
+  --bg:#e8f4ff;
+  --panel:#ffffff;--panel-solid:#ffffff;--panel-2:#eef6ff;
+  --ink:#15243a;--ink-strong:#0b1626;--ink-soft:#5d7391;
+  --toon-out:#111a2b;--toon-shadow:#111a2b;
+  --cyan:#ee1515;--cyan-dim:rgba(238,21,21,.14);--accent-ink:#ffffff;
+  --line:rgba(17,26,43,.20);--line-strong:rgba(17,26,43,.45);
+  --blue:#2a5fd8;--blue-bg:#dbe6ff;
+  --amber:#a97900;--amber-bg:#ffeeb3;
+}
+[data-style="toon"][data-toon="pokemon"] body{
+  background-color:var(--bg);
+  background-image:
+    repeating-linear-gradient(-24deg, rgba(255,203,5,.16) 0 22px, transparent 22px 62px),
+    radial-gradient(circle, rgba(17,26,43,.10) 1.5px, transparent 1.5px);
+  background-size:auto, 24px 24px;
+}
+[data-style="toon"][data-toon="pokemon"] .mast h1,
+[data-style="toon"][data-toon="pokemon"] .login-card h1,
+[data-style="toon"][data-toon="pokemon"] .boot-logo{color:#ffcb05;-webkit-text-stroke-color:#2a3d6b;text-shadow:4px 4px 0 #2a3d6b}
+[data-style="toon"][data-toon="pokemon"] .foot .total{color:#ee1515}
+/* bouncing spheres */
+[data-style="toon"][data-toon="pokemon"] .bgfx span{
+  border-radius:50%;filter:none;opacity:.85;mix-blend-mode:normal;
+  border:4px solid #111a2b;box-shadow:inset -10px -12px 0 rgba(17,26,43,.16), 5px 6px 0 rgba(17,26,43,.28);
+  background:radial-gradient(circle at 32% 26%, rgba(255,255,255,.95) 0 9%, transparent 10%), #ee1515;
+}
+[data-style="toon"][data-toon="pokemon"] .bgfx span:nth-child(1){width:150px;height:150px;left:5%;top:14%;min-width:0;min-height:0;animation:toonFloatA 17s ease-in-out infinite alternate}
+[data-style="toon"][data-toon="pokemon"] .bgfx span:nth-child(2){width:96px;height:96px;right:11%;top:22%;left:auto;min-width:0;min-height:0;background:radial-gradient(circle at 32% 26%, rgba(255,255,255,.95) 0 9%, transparent 10%), #ffcb05;animation:toonFloatB 13s ease-in-out infinite alternate}
+[data-style="toon"][data-toon="pokemon"] .bgfx span:nth-child(3){width:210px;height:210px;right:6%;bottom:-4%;top:auto;left:auto;min-width:0;min-height:0;background:radial-gradient(circle at 32% 26%, rgba(255,255,255,.95) 0 9%, transparent 10%), #2a5fd8;animation:toonFloatC 21s ease-in-out infinite alternate}
+[data-style="toon"][data-toon="pokemon"] .bgfx span:nth-child(4){width:70px;height:70px;left:22%;bottom:16%;top:auto;min-width:0;min-height:0;background:radial-gradient(circle at 32% 26%, rgba(255,255,255,.95) 0 9%, transparent 10%), #3ec46d;animation:toonFloatB 19s ease-in-out infinite alternate-reverse}
+[data-style="toon"][data-toon="pokemon"] .boot-dots i{background:#ee1515}
+[data-style="toon"][data-toon="pokemon"] .boot-dots i:nth-child(2){background:#ffcb05}
+[data-style="toon"][data-toon="pokemon"] .boot-dots i:nth-child(3){background:#2a5fd8}
+
+/* ---------------- SHINCHAN: crayon on butter paper ---------------- */
+[data-style="toon"][data-toon="shinchan"]{
+  --bg:#ffeec2;
+  --panel:#fffaf0;--panel-solid:#fffaf0;--panel-2:#ffeed0;
+  --ink:#3a2410;--ink-strong:#2a1907;--ink-soft:#8a6a44;
+  --toon-out:#2a1907;--toon-shadow:#2a1907;
+  --cyan:#f0592b;--cyan-dim:rgba(240,89,43,.16);--accent-ink:#fffaf0;
+  --line:rgba(42,25,7,.22);--line-strong:rgba(42,25,7,.48);
+  --green:#2f8f3e;--green-bg:#d9f2cf;
+  --amber:#b5760a;--amber-bg:#ffe6ad;
+  --red:#d63c22;--red-bg:#ffdcd2;
+}
+[data-style="toon"][data-toon="shinchan"] body{
+  background-color:var(--bg);
+  background-image:
+    repeating-linear-gradient(96deg, rgba(240,89,43,.10) 0 3px, transparent 3px 13px),
+    repeating-linear-gradient(4deg, rgba(58,36,16,.07) 0 2px, transparent 2px 11px),
+    radial-gradient(circle, rgba(58,36,16,.13) 1.4px, transparent 1.4px);
+  background-size:auto, auto, 20px 20px;
+}
+[data-style="toon"][data-toon="shinchan"] .mast h1,
+[data-style="toon"][data-toon="shinchan"] .login-card h1,
+[data-style="toon"][data-toon="shinchan"] .boot-logo{color:#f5b301;-webkit-text-stroke-color:#2a1907;text-shadow:4px 5px 0 #d63c22}
+/* wax crayon strokes */
+[data-style="toon"][data-toon="shinchan"] .bgfx{mix-blend-mode:multiply;opacity:.75}
+[data-style="toon"][data-toon="shinchan"] .bgfx span{
+  border-radius:60px;filter:blur(1px);opacity:.5;min-width:0;min-height:0;border:none;
+  background:repeating-linear-gradient(90deg, rgba(240,89,43,.95) 0 5px, rgba(240,89,43,.45) 5px 11px);
+}
+[data-style="toon"][data-toon="shinchan"] .bgfx span:nth-child(1){width:420px;height:56px;left:-4%;top:16%;transform:rotate(-13deg);animation:crayonA 19s ease-in-out infinite alternate}
+[data-style="toon"][data-toon="shinchan"] .bgfx span:nth-child(2){width:330px;height:44px;right:-3%;top:34%;left:auto;background:repeating-linear-gradient(90deg, rgba(245,179,1,.95) 0 5px, rgba(245,179,1,.4) 5px 11px);transform:rotate(9deg);animation:crayonB 23s ease-in-out infinite alternate}
+[data-style="toon"][data-toon="shinchan"] .bgfx span:nth-child(3){width:500px;height:64px;left:8%;bottom:8%;top:auto;background:repeating-linear-gradient(90deg, rgba(47,143,62,.85) 0 5px, rgba(47,143,62,.35) 5px 11px);transform:rotate(-5deg);animation:crayonC 26s ease-in-out infinite alternate}
+[data-style="toon"][data-toon="shinchan"] .bgfx span:nth-child(4){width:250px;height:38px;right:16%;bottom:24%;top:auto;left:auto;background:repeating-linear-gradient(90deg, rgba(58,111,214,.8) 0 5px, rgba(58,111,214,.3) 5px 11px);transform:rotate(17deg);animation:crayonB 21s ease-in-out infinite alternate-reverse}
+[data-style="toon"][data-toon="shinchan"] .boot-dots i{border-radius:52% 48% 44% 56%/56% 44% 56% 44%;background:#f0592b}
+[data-style="toon"][data-toon="shinchan"] .boot-dots i:nth-child(2){background:#f5b301}
+[data-style="toon"][data-toon="shinchan"] .boot-dots i:nth-child(3){background:#2f8f3e}
+[data-style="toon"][data-toon="shinchan"] .boot-bar,
+[data-style="toon"][data-toon="shinchan"] .field input,
+[data-style="toon"][data-toon="shinchan"] .field select{border-style:dashed}
+
+/* ---------------- BEN 10: dark tech, alien green, hexes ---------------- */
+[data-style="toon"][data-toon="ben10"]{
+  --bg:#0a1410;
+  --panel:#12211a;--panel-solid:#12211a;--panel-2:#0e1b15;
+  --ink:#d8ffe8;--ink-strong:#eaffe9;--ink-soft:#6f9c83;
+  --toon-out:#03110a;--toon-shadow:#03110a;
+  --cyan:#2bff6a;--cyan-dim:rgba(43,255,106,.16);--accent-ink:#03110a;
+  --line:rgba(43,255,106,.24);--line-strong:rgba(43,255,106,.5);
+  --green:#2bff6a;--green-bg:rgba(43,255,106,.14);
+  --blue:#43c9ff;--blue-bg:rgba(67,201,255,.14);
+  --amber:#ffd23f;--amber-bg:rgba(255,210,63,.14);
+  --red:#ff4d4d;--red-bg:rgba(255,77,77,.16);
+}
+[data-style="toon"][data-toon="ben10"] body{
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(43,255,106,.10), transparent 55%),
+    repeating-linear-gradient(60deg, rgba(43,255,106,.05) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(-60deg, rgba(43,255,106,.05) 0 1px, transparent 1px 26px);
+  background-size:auto,auto,auto;
+}
+[data-style="toon"][data-toon="ben10"] .mast h1,
+[data-style="toon"][data-toon="ben10"] .login-card h1,
+[data-style="toon"][data-toon="ben10"] .boot-logo{
+  color:#2bff6a;-webkit-text-stroke-color:#03110a;text-shadow:4px 4px 0 #03110a, 0 0 26px rgba(43,255,106,.75);
+}
+[data-style="toon"][data-toon="ben10"] .panel,
+[data-style="toon"][data-toon="ben10"] .modal,
+[data-style="toon"][data-toon="ben10"] .login-card,
+[data-style="toon"][data-toon="ben10"] .boot-inner{box-shadow:7px 8px 0 var(--toon-shadow), 0 0 34px -8px rgba(43,255,106,.5)}
+[data-style="toon"][data-toon="ben10"] .btn.pri,
+[data-style="toon"][data-toon="ben10"] .daytab.active{box-shadow:4px 5px 0 var(--toon-out), 0 0 20px -4px rgba(43,255,106,.85)}
+/* rotating hexes */
+[data-style="toon"][data-toon="ben10"] .bgfx span{
+  clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0% 50%);
+  border-radius:0;border:none;filter:none;min-width:0;min-height:0;opacity:.5;
+  background:linear-gradient(150deg, rgba(43,255,106,.55), rgba(43,255,106,.06));
+}
+[data-style="toon"][data-toon="ben10"] .bgfx span:nth-child(1){width:270px;height:300px;left:4%;top:10%;animation:hexSpinA 30s linear infinite}
+[data-style="toon"][data-toon="ben10"] .bgfx span:nth-child(2){width:150px;height:168px;right:12%;top:20%;left:auto;opacity:.4;animation:hexSpinB 24s linear infinite}
+[data-style="toon"][data-toon="ben10"] .bgfx span:nth-child(3){width:390px;height:430px;right:-6%;bottom:-14%;top:auto;left:auto;opacity:.3;animation:hexSpinA 44s linear infinite reverse}
+[data-style="toon"][data-toon="ben10"] .bgfx span:nth-child(4){width:110px;height:124px;left:26%;bottom:12%;top:auto;opacity:.55;animation:hexSpinB 19s linear infinite reverse}
+[data-style="toon"][data-toon="ben10"] .boot-dots i{
+  clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0% 50%);
+  border-radius:0;border:none;background:#2bff6a;box-shadow:0 0 14px rgba(43,255,106,.9);width:18px;height:20px;
+}
+[data-style="toon"][data-toon="ben10"] .boot-bar span{box-shadow:0 0 16px rgba(43,255,106,.9)}
+[data-style="toon"][data-toon="ben10"] .bpill,
+[data-style="toon"][data-toon="ben10"] .chip{transform:none}
+
+@keyframes toonFloatA{from{transform:translate(0,0) rotate(0)}to{transform:translate(7vw,-11vh) rotate(28deg)}}
+@keyframes toonFloatB{from{transform:translate(0,0) rotate(0)}to{transform:translate(-9vw,9vh) rotate(-34deg)}}
+@keyframes toonFloatC{from{transform:translate(0,0) scale(1)}to{transform:translate(-6vw,-7vh) scale(1.12)}}
+@keyframes crayonA{from{transform:rotate(-13deg) translate(0,0)}to{transform:rotate(-9deg) translate(6vw,5vh)}}
+@keyframes crayonB{from{transform:rotate(9deg) translate(0,0)}to{transform:rotate(14deg) translate(-7vw,4vh)}}
+@keyframes crayonC{from{transform:rotate(-5deg) translate(0,0)}to{transform:rotate(-1deg) translate(5vw,-4vh)}}
+@keyframes hexSpinA{to{transform:rotate(360deg)}}
+@keyframes hexSpinB{to{transform:rotate(-360deg)}}

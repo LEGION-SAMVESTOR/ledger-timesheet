@@ -59,7 +59,7 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 
 /* ---------- settings ---------- */
 const PALETTE_DEFAULT = {bg:"#07090d", surface:"#101620", text:"#dbe7f0", muted:"#6d7f8f", accent:"#38e1ff"};
-const SET_DEFAULTS = {theme:"dark", style:"hud", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", seed:true, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
+const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", seed:true, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
 let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(LS_SET) || "{}"));
 settings.palette = Object.assign({}, PALETTE_DEFAULT, settings.palette||{});
 
@@ -110,6 +110,7 @@ function applySettings(){
   de.dataset.theme = settings.theme;
   de.dataset.style = settings.style;
   de.dataset.bgfx = settings.bgfx;
+  de.dataset.toon = settings.toon;
   de.dataset.accent = settings.accent;
   de.dataset.font = settings.font;
   de.dataset.fsize = settings.fsize;
@@ -118,6 +119,7 @@ function applySettings(){
   $("themeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.th===settings.theme));
   $("styleSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.sy===settings.style));
   $("bgSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.bgfx===settings.bgfx));
+  $("toonSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.tn===settings.toon));
   $("fontSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.fn===settings.font));
   $("sizeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.fs===settings.fsize));
   $("accentDots").querySelectorAll(".dot").forEach(b=>b.classList.toggle("on", b.dataset.ac===settings.accent));
@@ -135,6 +137,7 @@ $("targetHrs") && $("targetHrs").addEventListener("change", ()=>{
 $("themeSeg").addEventListener("click", e=>{ if(e.target.dataset.th){ settings.theme=e.target.dataset.th; saveSettings(); }});
 $("styleSeg").addEventListener("click", e=>{ if(e.target.dataset.sy){ settings.style=e.target.dataset.sy; saveSettings(); }});
 $("bgSeg").addEventListener("click", e=>{ if(e.target.dataset.bgfx){ settings.bgfx=e.target.dataset.bgfx; saveSettings(); }});
+$("toonSeg").addEventListener("click", e=>{ if(e.target.dataset.tn){ settings.toon=e.target.dataset.tn; saveSettings(); }});
 $("fontSeg").addEventListener("click", e=>{ if(e.target.dataset.fn){ settings.font=e.target.dataset.fn; saveSettings(); }});
 $("sizeSeg").addEventListener("click", e=>{ if(e.target.dataset.fs){ settings.fsize=e.target.dataset.fs; saveSettings(); }});
 $("densitySeg").addEventListener("click", e=>{ if(e.target.dataset.dn){ settings.density=e.target.dataset.dn; saveSettings(); if(store) renderTable(); }});
