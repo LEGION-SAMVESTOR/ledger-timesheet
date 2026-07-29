@@ -60,7 +60,7 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 
 /* ---------- settings ---------- */
 const PALETTE_DEFAULT = {bg:"#07090d", surface:"#101620", text:"#dbe7f0", muted:"#6d7f8f", accent:"#38e1ff"};
-const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", toonImages:{}, imgfx:"front", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", seed:true, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
+const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", toonImages:{}, imgfx:"front", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", highlight:true, seed:true, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
 let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(LS_SET) || "{}"));
 settings.palette = Object.assign({}, PALETTE_DEFAULT, settings.palette||{});
 settings.toonImages = settings.toonImages || {};
@@ -321,12 +321,14 @@ function applySettings(){
   de.dataset.font = settings.font;
   de.dataset.fsize = settings.fsize;
   de.dataset.density = settings.density;
+  de.dataset.hl = settings.highlight ? "on" : "off";
   $("densitySeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.dn===settings.density));
   $("themeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.th===settings.theme));
   $("styleSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.sy===settings.style));
   $("bgSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.bgfx===settings.bgfx));
   $("toonSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.tn===settings.toon));
   $("imgfxSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.ix===settings.imgfx));
+  $("hlSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.hl==="1")===!!settings.highlight));
   $("fontSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.fn===settings.font));
   $("sizeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.fs===settings.fsize));
   $("accentDots").querySelectorAll(".dot").forEach(b=>b.classList.toggle("on", b.dataset.ac===settings.accent));
@@ -352,6 +354,7 @@ $("imgfxSeg").addEventListener("click", e=>{ if(e.target.dataset.ix){ settings.i
 $("fontSeg").addEventListener("click", e=>{ if(e.target.dataset.fn){ settings.font=e.target.dataset.fn; saveSettings(); }});
 $("sizeSeg").addEventListener("click", e=>{ if(e.target.dataset.fs){ settings.fsize=e.target.dataset.fs; saveSettings(); }});
 $("densitySeg").addEventListener("click", e=>{ if(e.target.dataset.dn){ settings.density=e.target.dataset.dn; saveSettings(); if(store) renderTable(); }});
+$("hlSeg").addEventListener("click", e=>{ if(e.target.dataset.hl!==undefined){ settings.highlight=e.target.dataset.hl==="1"; saveSettings(); }});
 $("accentDots").addEventListener("click", e=>{ const b=e.target.closest(".dot"); if(b){ settings.accent=b.dataset.ac; saveSettings(); }});
 $("seedSeg").addEventListener("click", e=>{ if(e.target.dataset.sd!==undefined){ settings.seed=e.target.dataset.sd==="1"; saveSettings(); }});
 $("remindSeg").addEventListener("click", e=>{
@@ -783,7 +786,7 @@ function renderTable(){
       const noBlocks = !t.sessions.length && !t.live;
       const h = taskHours(t);
       const share = dayTotal>0 ? Math.min(100, Math.round(h/dayTotal*100)) : 0;
-      return `<tr data-i="${i}">
+      return `<tr data-i="${i}" class="${t.live?"running":""}">
         <td><span class="bpill ${brandCls(t.brand)}">${t.brand?esc(t.brand):"Default Task"}</span></td>
         <td><div class="projcell">${esc(t.project)}</div>${t.task?`<div class="taskdesc">${esc(t.task)}</div>`:""}</td>
         <td class="tbcell">${t.live?`<span class="livehint">● REC</span>`:""}<div class="sesswrap">${chips||`<span style="color:var(--ink-soft);opacity:.5">—</span>`}</div></td>
