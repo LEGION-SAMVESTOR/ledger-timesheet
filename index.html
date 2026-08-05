@@ -77,6 +77,7 @@
       <div class="stat"><div class="v" id="statTasks">0</div><div class="l">Entries</div></div>
       <div class="stat"><div class="v" id="statClock">--:--</div><div class="l">Local</div></div>
     </div>
+    <button class="gearbtn" id="remBtn" title="Reminders">🔔</button>
     <button class="gearbtn" id="pinBtn" title="Pin floating timer popup">📌</button>
     <button class="gearbtn" id="settingsBtn" title="Settings">⚙</button>
   </header>
@@ -325,6 +326,42 @@
     <div class="prevwrap" style="margin-top:12px"><table class="prevtable" id="gapsTable"></table></div>
     <div class="mbtns" style="margin-top:14px">
       <button type="button" class="btn pri small" id="gapsClose">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- reminders modal -->
+<div class="overlay" id="remOverlay">
+  <div class="modal wide">
+    <h3>Reminders</h3>
+    <div class="mbody">
+      <div class="remlist" id="remList"></div>
+      <form class="remform" id="remForm">
+        <div class="field"><label>Remind me to…</label><input id="rText" placeholder="Send the daily update" required></div>
+        <div class="mrow">
+          <div class="field"><label>Trigger</label>
+            <select id="rType">
+              <option value="time">At a time</option>
+              <option value="start">When a task starts</option>
+              <option value="open">When Ledger opens</option>
+            </select>
+          </div>
+          <div class="field" id="rTimeWrap"><label>Time</label><input id="rTime" type="time" value="09:30"></div>
+          <div class="field" id="rRepeatWrap"><label>Repeat</label>
+            <select id="rRepeat">
+              <option value="daily">Every day</option>
+              <option value="weekdays">Weekdays</option>
+              <option value="once">Once</option>
+            </select>
+          </div>
+          <div class="field" id="rMatchWrap"><label>Project / brand contains</label><input id="rMatch" placeholder="leave blank for any task"></div>
+        </div>
+        <div class="merr" id="rErr"></div>
+        <div class="mbtns"><button type="submit" class="btn pri small">+ Add reminder</button></div>
+      </form>
+    </div>
+    <div class="mbtns" style="margin-top:12px">
+      <button type="button" class="btn pri small" id="remClose">Done</button>
     </div>
   </div>
 </div>

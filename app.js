@@ -405,6 +405,121 @@ function remindPing(t){
   setTimeout(()=>{ document.title = document.title.replace(/^⏱ STILL RUNNING — /,""); }, 8000);
 }
 
+/* ---------- reminders ----------
+   Three triggers: a clock time (with catch-up if the app was closed),
+   the moment a matching task's timer starts, and the first open of the day. */
+function reminders(){ return (store.reminders = store.reminders || []); }
+function fireReminder(r){
+  toast("🔔 " + r.text);
+  beep();
+  if("Notification" in window && Notification.permission==="granted"){
+    try{
+      new Notification("LEDGER — reminder", {
+        body:r.text, tag:"ledger-rem-"+r.id+"-"+Date.now(), requireInteraction:true
+      });
+    }catch(e){}
+  }
+}
+function remSummary(r){
+  if(r.type==="time"){
+    const rep = r.repeat==="weekdays" ? "weekdays" : (r.repeat==="once" ? "once" : "every day");
+    return `<b>${r.time}</b> · ${rep}`;
+  }
+  if(r.type==="start") return r.match ? `when a task matching <b>${esc(r.match)}</b> starts` : "when <b>any task</b> starts";
+  return "when <b>Ledger opens</b> (first time each day)";
+}
+function renderReminders(){
+  const list = reminders();
+  $("remList").innerHTML = list.map(r=>
+    `<div class="remitem ${r.on?"":"off"}">
+      <div class="rm-main">
+        <div class="rm-text">${esc(r.text)}</div>
+        <div class="rm-when">${remSummary(r)}</div>
+      </div>
+      <button type="button" class="icon-btn" data-remtoggle="${r.id}">${r.on?"on":"off"}</button>
+      <button type="button" class="icon-btn" data-remdel="${r.id}" title="Delete">✕</button>
+    </div>`).join("");
+  $("remList").querySelectorAll("[data-remtoggle]").forEach(b=>b.onclick=()=>{
+    const r = list.find(x=>String(x.id)===b.dataset.remtoggle);
+    if(r){ r.on = !r.on; save(); renderReminders(); }
+  });
+  $("remList").querySelectorAll("[data-remdel]").forEach(b=>b.onclick=()=>{
+    const i = list.findIndex(x=>String(x.id)===b.dataset.remdel);
+    if(i>-1){ list.splice(i,1); save(); renderReminders(); }
+  });
+}
+function syncRemFields(){
+  const t = $("rType").value;
+  $("rTimeWrap").style.display   = t==="time"  ? "block" : "none";
+  $("rRepeatWrap").style.display = t==="time"  ? "block" : "none";
+  $("rMatchWrap").style.display  = t==="start" ? "block" : "none";
+}
+$("rType").addEventListener("change", syncRemFields);
+$("remBtn").onclick = ()=>{ renderReminders(); syncRemFields(); $("remOverlay").classList.add("show"); };
+$("remClose").onclick = ()=>$("remOverlay").classList.remove("show");
+$("remOverlay").addEventListener("mousedown", e=>{ if(e.target===$("remOverlay")) $("remOverlay").classList.remove("show"); });
+$("remForm").addEventListener("submit", e=>{
+  e.preventDefault();
+  const text = $("rText").value.trim();
+  if(!text){ $("rErr").textContent = "Give the reminder some text."; return; }
+  const type = $("rType").value;
+  if(type==="time" && !/^\d{2}:\d{2}$/.test($("rTime").value)){ $("rErr").textContent = "Pick a time."; return; }
+  reminders().push({
+    id: Date.now(),
+    text, type,
+    time: $("rTime").value,
+    repeat: $("rRepeat").value,
+    match: $("rMatch").value.trim(),
+    on: true,
+    lastFired: null
+  });
+  save();
+  $("rText").value = ""; $("rMatch").value = ""; $("rErr").textContent = "";
+  renderReminders();
+  if("Notification" in window && Notification.permission==="default") Notification.requestPermission();
+  toast("Reminder added");
+});
+// clock reminders, checked once a second from tick()
+function checkTimeReminders(){
+  const now = new Date(), hm = now.toTimeString().slice(0,5), today = todayKey();
+  let dirty = false;
+  reminders().forEach(r=>{
+    if(!r.on || r.type!=="time" || r.lastFired===today) return;
+    if(r.repeat==="weekdays" && (now.getDay()===0 || now.getDay()===6)) return;
+    if(hm >= r.time){                 // >= so a missed one still lands when you return
+      fireReminder(r);
+      r.lastFired = today;
+      if(r.repeat==="once") r.on = false;
+      dirty = true;
+    }
+  });
+  if(dirty){
+    save();
+    if($("remOverlay").classList.contains("show")) renderReminders();
+  }
+}
+function fireOpenReminders(){
+  const today = todayKey();
+  let dirty = false, delay = 900;
+  reminders().forEach(r=>{
+    if(!r.on || r.type!=="open" || r.lastFired===today) return;
+    setTimeout(()=>fireReminder(r), delay);
+    delay += 1400;
+    r.lastFired = today;
+    if(r.repeat==="once") r.on = false;
+    dirty = true;
+  });
+  if(dirty) save();
+}
+function fireStartReminders(t, label){
+  const hay = [t.brand, t.project, t.task, label].join(" ").toLowerCase();
+  reminders().forEach(r=>{
+    if(!r.on || r.type!=="start") return;
+    if(r.match && !hay.includes(r.match.toLowerCase())) return;
+    setTimeout(()=>fireReminder(r), 250);
+  });
+}
+
 /* ---------- storage ---------- */
 let user=null, store=null, viewDay=null, curBrand="", prevDay=null;
 const dataKey = () => "ledger.data." + user;
@@ -520,6 +635,7 @@ function enter(name){
   buildBrandMenu();
   render();
   maybePromptCarry();
+  fireOpenReminders();
   if(settings.remind && "Notification" in window && Notification.permission==="default") Notification.requestPermission();
   setInterval(tick, 1000);
   tick();
@@ -539,7 +655,7 @@ function buildBrandMenu(){
 $("brandBtn").onclick = e=>{ e.stopPropagation(); $("brandDD").classList.toggle("open"); };
 document.addEventListener("click", e=>{ if(!$("brandDD").contains(e.target)) $("brandDD").classList.remove("open"); });
 document.addEventListener("keydown", e=>{
-  if(e.key==="Escape"){ $("brandDD").classList.remove("open"); closeBlock(); $("editOverlay").classList.remove("show"); $("setOverlay").classList.remove("show"); $("prevOverlay").classList.remove("show"); $("gapsOverlay").classList.remove("show"); $("assignOverlay").classList.remove("show"); $("carryOverlay").classList.remove("show"); }
+  if(e.key==="Escape"){ $("brandDD").classList.remove("open"); closeBlock(); $("editOverlay").classList.remove("show"); $("setOverlay").classList.remove("show"); $("prevOverlay").classList.remove("show"); $("gapsOverlay").classList.remove("show"); $("assignOverlay").classList.remove("show"); $("carryOverlay").classList.remove("show"); $("remOverlay").classList.remove("show"); }
 });
 
 /* ---------- undo (20s window to resume a stopped task and run both) ---------- */
@@ -658,6 +774,7 @@ $("blockModal").addEventListener("submit", e=>{
     }
     t.live = {task:label, start:startAt, remind:(rm>0?rm:null), nextRemind:(rm>0?rm:null)};
     if(rm>0 && "Notification" in window && Notification.permission==="default") Notification.requestPermission();
+    fireStartReminders(t, label);
     if(stopped.length) showUndo(stopped);
   }
   save(); closeBlock(); renderTable();
@@ -903,6 +1020,7 @@ window.addEventListener("resize", hideHoverCard)
 function tick(){
   $("statClock").textContent = new Date().toTimeString().slice(0,5);
   if(!store) return;
+  checkTimeReminders();
   const list = tasks();
   let dirty = false;
   list.forEach((t,i)=>{

@@ -480,7 +480,24 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 .gap-dur{color:var(--red);font-weight:600}
 .cov-pct{color:var(--cyan);font-weight:700}
 
-/* ---------- carry over ---------- */
+/* ---------- reminders ---------- */
+.remlist{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.remlist:empty::after{
+  content:"No reminders yet — add one below.";
+  color:var(--ink-soft);font-size:11.5px;padding:10px 0;
+}
+.remitem{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border:1px solid var(--line);border-radius:10px;background:var(--panel-2);
+}
+.remitem.off{opacity:.5}
+.remitem .rm-main{flex:1;min-width:0}
+.remitem .rm-text{color:var(--ink-strong);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.remitem .rm-when{color:var(--ink-soft);font-size:10.5px;letter-spacing:.04em;margin-top:1px}
+.remitem .rm-when b{color:var(--cyan);font-weight:600}
+.remform{border-top:1px dashed var(--line-strong);padding-top:14px}
+.remform .mrow{flex-wrap:wrap}
+.remform .mrow .field{min-width:130px}
 .carrybtn{margin:-4px 0 14px}
 .carrylist{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-bottom:14px}
 .carryitem{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer}
