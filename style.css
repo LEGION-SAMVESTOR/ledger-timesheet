@@ -315,6 +315,7 @@ header.top .spacer{flex:1}
 .bpill{
   display:inline-block;padding:2px 11px;border-radius:6px;font-size:11px;font-weight:600;letter-spacing:.05em;
   font-family:"Chakra Petch",sans-serif;border:1px solid transparent;
+  white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;
 }
 .b-KN{background:rgba(255,194,75,.16);color:var(--amber);border-color:rgba(255,194,75,.35)}
 .b-ZW{background:rgba(160,170,180,.14);color:var(--ink);border-color:rgba(160,170,180,.4)}
@@ -332,12 +333,13 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em;table-layout:fix
 .sheet td{overflow-wrap:anywhere}
 .tablewrap{max-width:100%}
 .sheet th{
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   text-align:center;font-size:9.5px;text-transform:uppercase;letter-spacing:.22em;color:var(--ink-soft);
   padding:11px 14px;border-bottom:1px solid var(--line-strong);font-family:"Chakra Petch",sans-serif;font-weight:600;
 }
 .sheet td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
 /* the panel's bars use 18px side padding — the table's edge cells line up with them */
-.sheet th:first-child,.sheet td:first-child{padding-left:18px}
+.sheet th:first-child,.sheet td:first-child{padding-left:18px;padding-right:6px}
 .sheet th:last-child,.sheet td:last-child{padding-right:18px}
 .sheet tbody tr:hover td{background:var(--cyan-dim)}
 /* running timer — tinted row with an accent marker down the left edge */
@@ -405,6 +407,11 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
   padding:12px 18px;border-bottom:1px solid var(--line);
 }
 .brandstrip:empty{display:flex}   /* keep the space reserved so nothing jumps later */
+.brandstrip:empty::after{
+  content:"NO TIME LOGGED YET";
+  font-family:"Chakra Petch",sans-serif;font-size:9.5px;letter-spacing:.22em;
+  color:var(--ink-soft);opacity:.55;
+}
 .bsitem{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;border:1px solid var(--line);border-radius:8px;padding:4px 10px 4px 5px;background:var(--panel-2)}
 .bsitem .v{color:var(--ink-strong);font-weight:600;font-family:"Chakra Petch",sans-serif}
 
@@ -415,14 +422,16 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
 .tgbar{height:5px;background:var(--line);border-radius:99px;overflow:hidden}
 .tgbar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--cyan));border-radius:99px;box-shadow:0 0 10px -2px var(--cyan);transition:width .4s ease}
 .tgbar span.full{background:var(--green);box-shadow:0 0 10px -2px var(--green)}
-.rowbtns{display:flex;gap:7px;justify-content:flex-end;flex-wrap:nowrap;min-width:0;padding-left:14px}
+.rowbtns{display:flex;gap:7px;justify-content:flex-end;flex-wrap:nowrap;min-width:0}
 .rowbtns .icon-btn{white-space:nowrap;flex:0 0 auto}
-/* ▶ and "⏹ stop" must occupy identical width, otherwise the wider stop state
-   overflows the column and lands on top of the Status dropdown */
+/* ▶ and "⏹ stop" occupy identical width so starting/stopping never reflows,
+   and the whole group is budgeted to fit its column — overflowing a flex-end
+   row spills LEFT, straight onto the status dropdown */
 .rowbtns .icon-btn.rec{
-  min-width:70px;display:inline-flex;align-items:center;justify-content:center;
+  min-width:62px;display:inline-flex;align-items:center;justify-content:center;
 }
-.rowbtns .icon-btn[data-sess]{min-width:58px;justify-content:center}
+.rowbtns .icon-btn[data-sess]{justify-content:center}
+.sheet td:last-child .rowbtns{padding:0}
 .empty{padding:56px 40px;text-align:center;color:var(--ink-soft)}
 .empty .disp{font-size:22px;margin-bottom:6px;color:var(--ink-strong);letter-spacing:.05em}
 
@@ -649,7 +658,7 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
 /* ---------- responsive ---------- */
 @media(max-width:980px){
   .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .tablewrap .sheet{min-width:820px}
+  .tablewrap .sheet{min-width:860px}
   header.top{gap:10px}
   .mast h1{font-size:24px}
   .stat{min-width:84px;padding:7px 12px 6px}
