@@ -21,6 +21,8 @@
     d.dataset.fsize  = s.fsize  || "m";
     d.dataset.density= s.density|| "comfy";
     d.dataset.toon   = s.toon   || "classic";
+    d.dataset.anim   = s.anim === false ? "off" : "on";
+    d.dataset.hl     = s.highlight === false ? "off" : "on";
     if(s.theme === "custom" && s.palette){
       var p = s.palette, st = d.style;
       var hx = function(h){ h=(h||"").replace("#",""); if(h.length===3) h=h.split("").map(function(c){return c+c}).join("");
@@ -113,7 +115,7 @@
       <thead><tr>
         <th style="width:112px">Brand</th><th style="width:26%">Project</th>
         <th>Timeblocks</th><th style="width:92px">Hours</th>
-        <th style="width:132px">Status</th><th style="width:152px"></th>
+        <th style="width:132px">Status</th><th style="width:186px"></th>
       </tr></thead>
       <tbody id="taskBody"></tbody>
     </table>
@@ -278,6 +280,13 @@
       </div>
     </div>
     <div class="setrow">
+      <div><div class="sl">Animations</div><div class="sd">Row reveals, hovers and transitions</div></div>
+      <div class="seg" id="animSeg">
+        <button type="button" data-an="1">ON</button>
+        <button type="button" data-an="0">OFF</button>
+      </div>
+    </div>
+    <div class="setrow">
       <div><div class="sl">Highlight active task</div><div class="sd">Tint the row while its timer runs</div></div>
       <div class="seg" id="hlSeg">
         <button type="button" data-hl="1">ON</button>
@@ -338,7 +347,7 @@
       <div class="remlist" id="remList"></div>
       <form class="remform" id="remForm">
         <div class="field"><label>Remind me to…</label><input id="rText" placeholder="Send the daily update" required></div>
-        <div class="mrow">
+        <div class="rgrid">
           <div class="field"><label>Trigger</label>
             <select id="rType">
               <option value="time">At a time</option>

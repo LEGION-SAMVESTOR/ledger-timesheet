@@ -66,6 +66,33 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
+
+/* dragging should push the floating artwork around, not select the UI text */
+body{-webkit-user-select:none;user-select:none}
+input,textarea,select,.prevtable,.gapsTable,#gapsTable,.taskdesc,.projcell,.sess,.chip{
+  -webkit-user-select:text;user-select:text;
+}
+
+/* motion toggle — transform/opacity only, so nothing reflows */
+[data-anim="off"] *,[data-anim="off"] *::before,[data-anim="off"] *::after{
+  animation-duration:.001ms !important;animation-iteration-count:1 !important;
+  transition-duration:.001ms !important;
+}
+[data-anim="on"] .sheet tbody tr{animation:rowIn .26s ease both}
+[data-anim="on"] .sheet tbody tr:nth-child(2){animation-delay:.03s}
+[data-anim="on"] .sheet tbody tr:nth-child(3){animation-delay:.06s}
+[data-anim="on"] .sheet tbody tr:nth-child(4){animation-delay:.09s}
+[data-anim="on"] .sheet tbody tr:nth-child(5){animation-delay:.12s}
+[data-anim="on"] .sheet tbody tr:nth-child(n+6){animation-delay:.15s}
+/* opacity only — transforms on <tr> distort the row box and reintroduce shift */
+@keyframes rowIn{from{opacity:0}to{opacity:1}}
+[data-anim="on"] .stat{transition:transform .18s ease}
+[data-anim="on"] .stat:hover{transform:translateY(-2px)}
+[data-anim="on"] .bsitem{transition:transform .15s ease}
+[data-anim="on"] .bsitem:hover{transform:translateY(-2px)}
+@media (prefers-reduced-motion: reduce){
+  .sheet tbody tr{animation:none !important}
+}
 body{
   font-family:var(--font-body);
   background:
@@ -293,7 +320,10 @@ header.top .spacer{flex:1}
 .b-none{background:var(--panel-2);color:var(--ink-soft);border-color:var(--line)}
 
 /* ---------- table ---------- */
-table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
+/* fixed layout: column widths come from the header, not the content, so adding a
+   timeblock can't re-flow the other columns and shift every row */
+table.sheet{width:100%;border-collapse:collapse;font-size:.96em;table-layout:fixed}
+.sheet td{overflow-wrap:anywhere}
 .tablewrap{max-width:100%}
 .sheet th{
   text-align:center;font-size:9.5px;text-transform:uppercase;letter-spacing:.22em;color:var(--ink-soft);
@@ -308,6 +338,18 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 @keyframes runPulse{0%,100%{box-shadow:inset 3px 0 0 var(--cyan)}50%{box-shadow:inset 3px 0 0 color-mix(in srgb, var(--cyan) 40%, transparent)}}
 @media (prefers-reduced-motion: reduce){ [data-hl="on"] .sheet tbody tr.running td:first-child{animation:none} }
 .sheet .num{font-variant-numeric:tabular-nums;text-align:right;font-size:1.02em;color:var(--ink-strong)}
+/* --- layout stability: reserve the space variable content will occupy --- */
+.sheet tbody td{height:56px}                      /* rows keep their height with or without blocks */
+[data-density="compact"] .sheet tbody td,
+[data-density="hover"] .sheet tbody td{height:42px}
+.sesswrap{min-height:24px;align-content:center}
+.status-sel{width:100%}                            /* status text length can't resize the column */
+.rowbtns{min-height:26px}
+.rowbtns .icon-btn.rec{min-width:34px;justify-content:center;text-align:center}
+.livehint{min-width:44px}
+.brandstrip{min-height:58px;align-items:center}    /* matches its populated height, so no jump when the first hours land */
+.tgwrap{min-height:32px}
+.stat .v{min-height:26px}
 .num.editable{cursor:pointer;text-decoration:underline dotted var(--ink-soft) 1px;text-underline-offset:4px}
 .status-sel{border:1px solid transparent;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:"Chakra Petch",sans-serif;letter-spacing:.03em}
 .st-done{background:var(--green-bg);color:var(--green)}
@@ -336,7 +378,7 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
   transition:.12s;
 }
 .chip b{color:var(--ink);font-weight:500;max-width:180px;overflow:hidden;text-overflow:ellipsis}
-.chip .ch{color:var(--cyan);font-weight:600}
+.chip .ch{color:var(--cyan);font-weight:600;min-width:34px;display:inline-block;text-align:right}
 .chip.clickable{cursor:pointer}
 .chip.clickable:hover{border-color:var(--cyan);color:var(--cyan)}
 .chip.clickable:hover b{color:var(--cyan)}
@@ -352,7 +394,7 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
   display:flex;flex-wrap:wrap;gap:8px;align-items:center;
   padding:12px 16px;border-bottom:1px solid var(--line);
 }
-.brandstrip:empty{display:none}
+.brandstrip:empty{display:flex}   /* keep the space reserved so nothing jumps later */
 .bsitem{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;border:1px solid var(--line);border-radius:8px;padding:4px 10px 4px 5px;background:var(--panel-2)}
 .bsitem .v{color:var(--ink-strong);font-weight:600;font-family:"Chakra Petch",sans-serif}
 
@@ -363,7 +405,8 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 .tgbar{height:5px;background:var(--line);border-radius:99px;overflow:hidden}
 .tgbar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--cyan));border-radius:99px;box-shadow:0 0 10px -2px var(--cyan);transition:width .4s ease}
 .tgbar span.full{background:var(--green);box-shadow:0 0 10px -2px var(--green)}
-.rowbtns{display:flex;gap:6px;justify-content:flex-end}
+.rowbtns{display:flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap}
+.rowbtns .icon-btn{white-space:nowrap;flex:0 0 auto}
 .empty{padding:56px 40px;text-align:center;color:var(--ink-soft)}
 .empty .disp{font-size:22px;margin-bottom:6px;color:var(--ink-strong);letter-spacing:.05em}
 
@@ -496,8 +539,10 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em}
 .remitem .rm-when{color:var(--ink-soft);font-size:10.5px;letter-spacing:.04em;margin-top:1px}
 .remitem .rm-when b{color:var(--cyan);font-weight:600}
 .remform{border-top:1px dashed var(--line-strong);padding-top:14px}
-.remform .mrow{flex-wrap:wrap}
-.remform .mrow .field{min-width:130px}
+.remform .rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px;align-items:end}
+.remform .rgrid .field{margin:0;min-width:0}
+.remform .rgrid .field input,.remform .rgrid .field select{width:100%}
+.remform .mbtns{margin-top:12px}
 .carrybtn{margin:-4px 0 14px}
 .carrylist{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-bottom:14px}
 .carryitem{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer}
