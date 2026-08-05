@@ -349,7 +349,7 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em;table-layout:fix
 [data-density="compact"] .sheet tbody td,
 [data-density="hover"] .sheet tbody td{height:42px}
 .sesswrap{min-height:24px;align-content:center}
-.status-sel{width:100%}                            /* status text length can't resize the column */
+select.status-sel{width:100%}   /* table dropdowns only — the read-only chips elsewhere size to content */
 .rowbtns{min-height:26px}
 .rowbtns .icon-btn.rec{min-width:34px;justify-content:center;text-align:center}
 .livehint{min-width:44px}
@@ -412,7 +412,7 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em;table-layout:fix
 .tgbar{height:5px;background:var(--line);border-radius:99px;overflow:hidden}
 .tgbar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--cyan));border-radius:99px;box-shadow:0 0 10px -2px var(--cyan);transition:width .4s ease}
 .tgbar span.full{background:var(--green);box-shadow:0 0 10px -2px var(--green)}
-.rowbtns{display:flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap;min-width:0}
+.rowbtns{display:flex;gap:7px;justify-content:flex-end;flex-wrap:nowrap;min-width:0;padding-left:14px}
 .rowbtns .icon-btn{white-space:nowrap;flex:0 0 auto}
 /* ▶ and "⏹ stop" must occupy identical width, otherwise the wider stop state
    overflows the column and lands on top of the Status dropdown */
@@ -563,7 +563,8 @@ table.sheet{width:100%;border-collapse:collapse;font-size:.96em;table-layout:fix
 .carryitem:last-child{border-bottom:none}
 .carryitem:hover{background:var(--cyan-dim)}
 .carryitem input{accent-color:var(--cyan);width:15px;height:15px;flex:0 0 15px}
-.carryitem .ci-main{flex:1;min-width:0}
+.carryitem .ci-main{flex:1 1 auto;min-width:0}
+.carryitem .bpill,.carryitem .status-sel{flex:0 0 auto;width:auto;max-width:40%}
 .carryitem .ci-proj{color:var(--ink-strong);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .carryitem .ci-sub{color:var(--ink-soft);font-size:10.5px}
 
