@@ -67,11 +67,17 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 
-/* dragging should push the floating artwork around, not select the UI text */
-body{-webkit-user-select:none;user-select:none}
-input,textarea,select,.prevtable,.gapsTable,#gapsTable,.taskdesc,.projcell,.sess,.chip{
+/* dragging should push the floating artwork around, never select UI text.
+   Applied to every element so nothing can opt itself back in; only real text
+   fields stay selectable. */
+*,*::before,*::after{
+  -webkit-user-select:none;user-select:none;
+  -webkit-user-drag:none;
+}
+input,textarea,[contenteditable="true"]{
   -webkit-user-select:text;user-select:text;
 }
+img{-webkit-user-drag:none;pointer-events:none}
 
 /* motion toggle — transform/opacity only, so nothing reflows */
 [data-anim="off"] *,[data-anim="off"] *::before,[data-anim="off"] *::after{

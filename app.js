@@ -408,6 +408,15 @@ function remindPing(t){
   setTimeout(()=>{ document.title = document.title.replace(/^⏱ STILL RUNNING — /,""); }, 8000);
 }
 
+/* belt-and-braces: cancel any selection or drag that starts outside a text field,
+   so a click-drag across the page only pushes the floating artwork around */
+document.addEventListener("selectstart", e=>{
+  if(!(e.target instanceof Element) || !e.target.closest("input,textarea,[contenteditable='true']")) e.preventDefault();
+});
+document.addEventListener("dragstart", e=>{
+  if(!(e.target instanceof Element) || !e.target.closest("input,textarea")) e.preventDefault();
+});
+
 /* ---------- reminders ----------
    Three triggers: a clock time (with catch-up if the app was closed),
    the moment a matching task's timer starts, and the first open of the day. */
