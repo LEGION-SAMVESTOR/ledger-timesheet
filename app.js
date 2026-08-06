@@ -910,11 +910,13 @@ function renderTable(){
     const editable = viewDay===todayKey();
     body.innerHTML = orderedIndices(list).map(i=>{
       const t = list[i];
+      // keep blocks in clock order — a gap assigned later still slots in where it happened
+      t.sessions.sort((a,b)=>(toSec(a.start)??0)-(toSec(b.start)??0));
       const chips = t.sessions.map((s,k)=>{
         const m = Math.round(hours(s.start,s.end)*60);
-        return `<span class="chip ${editable?"clickable":""}" ${editable?`data-sedit="${i}:${k}" title="Click to edit"`:""}>${s.task?`<b>${esc(s.task)}</b>`:""}${short(s.start)}–${short(s.end)}<span class="ch">${m}m</span></span>`;
+        return `<span class="chip ${editable?"clickable":""}" ${editable?`data-sedit="${i}:${k}" title="Click to edit"`:""}>${s.task?`<b>${esc(s.task)}</b>`:""}<span class="ct">${short(s.start)}–${short(s.end)}</span><span class="ch">${m}m</span></span>`;
       }).join("")
-        + (t.live?`<span class="chip live ${editable?"clickable":""}" ${editable?`data-ledit="${i}" title="Click to rename"`:""}>${t.live.task?`<b>${esc(t.live.task)}</b>`:""}${short(t.live.start)} – now<span class="ch" data-livemin="${i}">${Math.round(hours(t.live.start,hhmmss(new Date()))*60)}m</span></span>`:"");
+        + (t.live?`<span class="chip live ${editable?"clickable":""}" ${editable?`data-ledit="${i}" title="Click to rename"`:""}>${t.live.task?`<b>${esc(t.live.task)}</b>`:""}<span class="ct">${short(t.live.start)} – now</span><span class="ch" data-livemin="${i}">${Math.round(hours(t.live.start,hhmmss(new Date()))*60)}m</span></span>`:"");
       const noBlocks = !t.sessions.length && !t.live;
       const h = taskHours(t);
       const share = dayTotal>0 ? Math.min(100, Math.round(h/dayTotal*100)) : 0;
@@ -1165,6 +1167,7 @@ function buildRows(expandDefaults){
   const rows=[], meta=[];
   for(const i of orderedIndices(list)){
     const t = list[i];
+    t.sessions.sort((a,b)=>(toSec(a.start)??0)-(toSec(b.start)??0));
     const total = exportHours(t, liveEnd);
     if(total<=0) continue; // skip zero-hour entries
     const blocks = exportBlocks(t, liveEnd);

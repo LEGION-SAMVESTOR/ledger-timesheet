@@ -383,14 +383,17 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
 /* timeblock chips — must stay inside the column, never spill into Hours */
 .tbcell{min-width:0;overflow:hidden}
 .sesswrap{display:flex;flex-wrap:wrap;gap:6px 7px;align-items:center;min-width:0;max-width:100%}
+/* chips wrap their content instead of ellipsizing — full task names always read;
+   only the times keep nowrap so "12:42–13:00" never splits across lines */
 .chip{
-  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+  display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px 6px;white-space:normal;
   border:1px solid var(--line);background:var(--panel-2);border-radius:7px;
   padding:3.5px 10px;font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums;
-  transition:.12s;max-width:100%;min-width:0;overflow:hidden;
+  transition:.12s;max-width:100%;min-width:0;
 }
-.chip b{color:var(--ink);font-weight:500;max-width:180px;min-width:0;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
-.chip .ch{color:var(--cyan);font-weight:600;min-width:34px;display:inline-block;text-align:right}
+.chip b{color:var(--ink);font-weight:500;min-width:0;overflow-wrap:anywhere;flex:0 1 auto}
+.chip .ct{white-space:nowrap}
+.chip .ch{color:var(--cyan);font-weight:600;min-width:34px;display:inline-block;text-align:right;white-space:nowrap}
 .chip.clickable{cursor:pointer}
 .chip.clickable:hover{border-color:var(--cyan);color:var(--cyan)}
 .chip.clickable:hover b{color:var(--cyan)}
