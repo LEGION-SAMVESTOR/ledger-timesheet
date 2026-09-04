@@ -23,6 +23,7 @@
     d.dataset.toon   = s.toon   || "classic";
     d.dataset.anim   = s.anim === false ? "off" : "on";
     d.dataset.stars  = s.stars ? "on" : "off";
+    d.dataset.bgpat  = s.bgpat  || "grid";
     d.dataset.hl     = s.highlight === false ? "off" : "on";
     if(s.theme === "custom" && s.palette){
       var p = s.palette, st = d.style;
@@ -202,10 +203,28 @@
       </div>
     </div>
     <div class="setrow">
+      <div><div class="sl">Page background</div><div class="sd">Texture behind everything — grid, your own image, or none</div></div>
+      <div class="imgpick">
+        <div class="seg" id="bgPatSeg">
+          <button type="button" data-bp="grid">GRID</button>
+          <button type="button" data-bp="image">IMAGE</button>
+          <button type="button" data-bp="off">OFF</button>
+        </div>
+        <div class="bgimgrow" id="bgImgRow">
+          <div class="thumbs" id="bgThumb"></div>
+          <label class="btn small uploadbtn">⤒ Image<input type="file" id="bgUpload" accept="image/*" hidden></label>
+          <label class="dimwrap">Dim <input type="range" id="bgDim" min="0" max="90" step="5"></label>
+        </div>
+      </div>
+    </div>
+    <div class="setrow">
       <div><div class="sl">Night sky</div><div class="sd">Starfield layered over any background</div></div>
-      <div class="seg" id="starSeg">
-        <button type="button" data-st="1">ON</button>
-        <button type="button" data-st="0">OFF</button>
+      <div class="imgpick">
+        <div class="seg" id="starSeg">
+          <button type="button" data-st="1">ON</button>
+          <button type="button" data-st="0">OFF</button>
+        </div>
+        <button type="button" class="btn small" id="starCfgBtn">✦ Tune night sky</button>
       </div>
     </div>
     <div class="setrow toonrow" id="toonRow">
@@ -351,6 +370,44 @@
     <div class="prevwrap" style="margin-top:12px"><table class="prevtable" id="gapsTable"></table></div>
     <div class="mbtns" style="margin-top:14px">
       <button type="button" class="btn pri small" id="gapsClose">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- night sky settings -->
+<div class="overlay" id="starOverlay">
+  <div class="modal">
+    <h3>Night sky</h3>
+    <p class="phint">Tune the starfield. Changes preview live behind this panel.</p>
+    <div class="mbody">
+      <div class="setrow">
+        <div><div class="sl">Star density</div><div class="sd">How many stars per layer</div></div>
+        <label class="rangewrap"><input type="range" id="scDensity" min="10" max="220" step="5"><span id="scDensityV"></span></label>
+      </div>
+      <div class="setrow">
+        <div><div class="sl">Twinkle speed</div><div class="sd">How quickly stars pulse</div></div>
+        <label class="rangewrap"><input type="range" id="scTwinkle" min="25" max="300" step="5"><span id="scTwinkleV"></span></label>
+      </div>
+      <div class="setrow">
+        <div><div class="sl">Drift speed</div><div class="sd">How fast the sky moves</div></div>
+        <label class="rangewrap"><input type="range" id="scDrift" min="25" max="400" step="5"><span id="scDriftV"></span></label>
+      </div>
+      <div class="setrow">
+        <div><div class="sl">Brightness</div><div class="sd">Overall intensity</div></div>
+        <label class="rangewrap"><input type="range" id="scBright" min="20" max="150" step="5"><span id="scBrightV"></span></label>
+      </div>
+      <div class="setrow">
+        <div><div class="sl">Shooting stars</div><div class="sd">How many streaks at once</div></div>
+        <label class="rangewrap"><input type="range" id="scShoot" min="0" max="8" step="1"><span id="scShootV"></span></label>
+      </div>
+      <div class="setrow">
+        <div><div class="sl">Shooting frequency</div><div class="sd">Seconds between streaks</div></div>
+        <label class="rangewrap"><input type="range" id="scShootFreq" min="3" max="60" step="1"><span id="scShootFreqV"></span></label>
+      </div>
+    </div>
+    <div class="mbtns" style="margin-top:12px">
+      <button type="button" class="btn small" id="starReset">Reset</button>
+      <button type="button" class="btn pri small" id="starCfgClose">Done</button>
     </div>
   </div>
 </div>

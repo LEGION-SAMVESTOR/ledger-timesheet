@@ -60,10 +60,13 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 
 /* ---------- settings ---------- */
 const PALETTE_DEFAULT = {bg:"#07090d", surface:"#101620", text:"#dbe7f0", muted:"#6d7f8f", accent:"#38e1ff"};
-const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", toonImages:{}, imgfx:"front", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", highlight:true, anim:true, stars:false, askStart:true, seed:true, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
+const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", toonImages:{}, imgfx:"front", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", highlight:true, anim:true, stars:false, askStart:true, seed:true,
+  bgpat:"grid", bgdim:55,
+  starCfg:{density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13}, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
 let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(LS_SET) || "{}"));
 settings.palette = Object.assign({}, PALETTE_DEFAULT, settings.palette||{});
 settings.toonImages = settings.toonImages || {};
+settings.starCfg = Object.assign({density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13}, settings.starCfg||{});
 
 /* ---------- background sprites: uploaded images (+ optional URLs) ----------
    Uploads live in their own localStorage key so settings stay small and fast
@@ -76,7 +79,7 @@ function saveToonImg(){
   catch(e){ toast("Browser storage is full — remove an image and try again"); return false; }
 }
 // shrink to a sane size before storing, otherwise a couple of photos blow the quota
-function shrinkImage(file){
+function shrinkImage(file, maxPx, quality){
   return new Promise((res,rej)=>{
     const fr = new FileReader();
     fr.onerror = ()=>rej(new Error("read"));
@@ -84,14 +87,14 @@ function shrinkImage(file){
       const img = new Image();
       img.onerror = ()=>rej(new Error("decode"));
       img.onload = ()=>{
-        const MAX = 480;
+        const MAX = maxPx || 480;
         let w = img.naturalWidth, h = img.naturalHeight;
         const sc = Math.min(1, MAX/Math.max(w,h));
         w = Math.max(1,Math.round(w*sc)); h = Math.max(1,Math.round(h*sc));
         const c = document.createElement("canvas");
         c.width = w; c.height = h;
         c.getContext("2d").drawImage(img,0,0,w,h);
-        res(c.toDataURL("image/webp",0.82));
+        res(c.toDataURL("image/webp", quality || 0.82));
       };
       img.src = fr.result;
     };
@@ -324,6 +327,7 @@ function applySettings(){
   de.dataset.hl = settings.highlight ? "on" : "off";
   de.dataset.anim = settings.anim ? "on" : "off";
   de.dataset.stars = settings.stars ? "on" : "off";
+  de.dataset.bgpat = settings.bgpat;
   $("densitySeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.dn===settings.density));
   $("themeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.th===settings.theme));
   $("styleSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.sy===settings.style));
@@ -334,6 +338,8 @@ function applySettings(){
   $("animSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.an==="1")===!!settings.anim));
   $("askStartSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.as==="1")===!!settings.askStart));
   $("starSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.st==="1")===!!settings.stars));
+  $("bgPatSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.bp===settings.bgpat));
+  if(document.activeElement!==$("bgDim")) $("bgDim").value = settings.bgdim;
   $("fontSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.fn===settings.font));
   $("sizeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.fs===settings.fsize));
   $("accentDots").querySelectorAll(".dot").forEach(b=>b.classList.toggle("on", b.dataset.ac===settings.accent));
@@ -346,6 +352,9 @@ function applySettings(){
   applyPalette();
   renderToonThumbs();
   applyToonImages();
+  applyBgImage();
+  buildStarfield();
+  syncStarInputs();
 }
 $("targetHrs") && $("targetHrs").addEventListener("change", ()=>{
   const v = parseFloat($("targetHrs").value);
@@ -378,7 +387,117 @@ $("remindMins").addEventListener("change", ()=>{
 $("settingsBtn").onclick = ()=>$("setOverlay").classList.add("show");
 $("setClose").onclick = ()=>$("setOverlay").classList.remove("show");
 $("setOverlay").addEventListener("mousedown", e=>{ if(e.target===$("setOverlay")) $("setOverlay").classList.remove("show"); });
-applySettings();
+
+
+/* ---------- page background image ---------- */
+const LS_BGIMG = "ledger.bgimage";
+let bgImage = "";
+try{ bgImage = localStorage.getItem(LS_BGIMG) || ""; }catch(e){ bgImage = ""; }
+function applyBgImage(){
+  const de = document.documentElement;
+  if(bgImage) de.style.setProperty("--bgimg", 'url("' + bgImage + '")');
+  else de.style.removeProperty("--bgimg");
+  de.style.setProperty("--bgdim", (settings.bgdim||0)/100);
+  $("bgThumb").innerHTML = bgImage
+    ? '<span class="thumb"><img src="' + bgImage + '" alt=""><button type="button" id="bgClear" title="Remove">×</button></span>'
+    : "";
+  const clr = $("bgClear");
+  if(clr) clr.onclick = ()=>{
+    bgImage = "";
+    try{ localStorage.removeItem(LS_BGIMG); }catch(e){}
+    applyBgImage();
+  };
+}
+$("bgUpload").addEventListener("change", async e=>{
+  const f = e.target.files[0];
+  e.target.value = "";
+  if(!f) return;
+  try{
+    // backgrounds cover the viewport, so they keep more resolution than sprites
+    bgImage = await shrinkImage(f, 1920, 0.8);
+    localStorage.setItem(LS_BGIMG, bgImage);
+    settings.bgpat = "image"; saveSettings();
+    toast("Background image set");
+  }catch(err){
+    bgImage = "";
+    toast(err && err.name === "QuotaExceededError" ? "Image too large for browser storage" : "Could not read that image");
+  }
+  applyBgImage();
+});
+$("bgPatSeg").addEventListener("click", e=>{
+  if(!e.target.dataset.bp) return;
+  settings.bgpat = e.target.dataset.bp;
+  saveSettings();
+  if(settings.bgpat === "image" && !bgImage) $("bgUpload").click();
+});
+$("bgDim").addEventListener("input", ()=>{ settings.bgdim = +$("bgDim").value; saveSettings(); });
+
+/* ---------- starfield generation ---------- */
+function buildStarfield(){
+  const c = settings.starCfg;
+  const field = $("starField");
+  if(!field) return;
+  const layers = [
+    {el:".s1", n:c.density,               tile:300, r:[1.3,1.9], a:[.72,1.0], drift:240, tw:4.5, v:"1"},
+    {el:".s2", n:Math.round(c.density*.8), tile:210, r:[0.9,1.3], a:[.45,.78], drift:340, tw:6.5, v:"2"},
+    {el:".s3", n:Math.round(c.density*1.2),tile:150, r:[0.6,1.0], a:[.28,.5],  drift:470, tw:9.0, v:"3"}
+  ];
+  const rnd=(a,b)=>a+Math.random()*(b-a);
+  const bright = (c.bright||100)/100;
+  layers.forEach(L=>{
+    const el = field.querySelector(L.el);
+    if(!el) return;
+    let img = [];
+    for(let i=0;i<L.n;i++){
+      const r = rnd(L.r[0], L.r[1]).toFixed(2);
+      const x = Math.round(rnd(0, L.tile)), y = Math.round(rnd(0, L.tile));
+      const a = Math.min(1, rnd(L.a[0], L.a[1]) * bright).toFixed(2);
+      const tint = Math.random() < .18 ? "255,240,214" : (Math.random() < .3 ? "214,238,255" : "255,255,255");
+      img.push(`radial-gradient(${r}px ${r}px at ${x}px ${y}px, rgba(${tint},${a}), transparent)`);
+    }
+    el.style.backgroundImage = img.join(",");
+    el.style.backgroundSize = L.tile + "px " + L.tile + "px";
+    field.style.setProperty("--sd" + L.v, (L.drift * 100 / (c.drift||100)).toFixed(0) + "s");
+    field.style.setProperty("--tw" + L.v, (L.tw * 100 / (c.twinkle||100)).toFixed(2) + "s");
+  });
+  // shooting stars: one element per streak, staggered so they never fire together
+  field.querySelectorAll(".shoot").forEach(el=>el.remove());
+  const n = Math.max(0, Math.min(8, c.shoot|0));
+  for(let i=0;i<n;i++){
+    const el = document.createElement("i");
+    el.className = "shoot";
+    el.style.top = (6 + Math.random()*58).toFixed(1) + "%";
+    el.style.width = Math.round(rnd(120, 220)) + "px";
+    el.style.setProperty("--shootdur", (c.shootFreq * n).toFixed(1) + "s");
+    el.style.animationDelay = (i * c.shootFreq).toFixed(1) + "s";
+    field.appendChild(el);
+  }
+}
+const STAR_INPUTS = {scDensity:"density", scTwinkle:"twinkle", scDrift:"drift", scBright:"bright", scShoot:"shoot", scShootFreq:"shootFreq"};
+function syncStarInputs(){
+  const c = settings.starCfg;
+  const unit = {density:"", twinkle:"%", drift:"%", bright:"%", shoot:"", shootFreq:"s"};
+  Object.entries(STAR_INPUTS).forEach(([id,key])=>{
+    if(document.activeElement !== $(id)) $(id).value = c[key];
+    $(id+"V").textContent = c[key] + unit[key];
+  });
+}
+Object.entries(STAR_INPUTS).forEach(([id,key])=>{
+  $(id).addEventListener("input", ()=>{
+    settings.starCfg[key] = +$(id).value;
+    if(!settings.stars){ settings.stars = true; }   // show what is being tuned
+    saveSettings();
+  });
+});
+$("starCfgBtn").onclick = ()=>{ syncStarInputs(); $("starOverlay").classList.add("show"); };
+$("starCfgClose").onclick = ()=>$("starOverlay").classList.remove("show");
+$("starOverlay").addEventListener("mousedown", e=>{ if(e.target===$("starOverlay")) $("starOverlay").classList.remove("show"); });
+$("starReset").onclick = ()=>{
+  settings.starCfg = {density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13};
+  saveSettings();
+};
+
+applySettings();   // first paint — every binding above now exists
 
 /* ---------- reminders ---------- */
 let audioCtx = null;

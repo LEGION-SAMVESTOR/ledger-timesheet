@@ -1312,29 +1312,13 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
 .starfield i{position:absolute;inset:-25%;display:block;background-repeat:repeat}
 /* three parallax layers: bright & sparse, mid, faint & dense */
 .starfield .s1{
-  background-image:
-    radial-gradient(1.7px 1.7px at 34px 22px, rgba(255,255,255,.95), transparent),
-    radial-gradient(1.5px 1.5px at 148px 96px, rgba(214,238,255,.9), transparent),
-    radial-gradient(1.9px 1.9px at 232px 168px, rgba(255,255,255,.85), transparent),
-    radial-gradient(1.4px 1.4px at 78px 226px, rgba(255,240,214,.9), transparent);
-  background-size:300px 300px;
-  animation:starDriftA 240s linear infinite, starTwinkleA 4.5s ease-in-out infinite alternate;
+  animation:starDriftA var(--sd1,240s) linear infinite, starTwinkleA var(--tw1,4.5s) ease-in-out infinite alternate;
 }
 .starfield .s2{
-  background-image:
-    radial-gradient(1.2px 1.2px at 60px 58px, rgba(255,255,255,.7), transparent),
-    radial-gradient(1px 1px at 172px 128px, rgba(190,225,255,.65), transparent),
-    radial-gradient(1.3px 1.3px at 108px 196px, rgba(255,255,255,.6), transparent);
-  background-size:210px 210px;
-  animation:starDriftB 340s linear infinite, starTwinkleB 6.5s ease-in-out infinite alternate;
+  animation:starDriftB var(--sd2,340s) linear infinite, starTwinkleB var(--tw2,6.5s) ease-in-out infinite alternate;
 }
 .starfield .s3{
-  background-image:
-    radial-gradient(.9px .9px at 26px 74px, rgba(255,255,255,.45), transparent),
-    radial-gradient(.8px .8px at 122px 34px, rgba(255,255,255,.4), transparent),
-    radial-gradient(.9px .9px at 88px 152px, rgba(210,230,255,.42), transparent);
-  background-size:150px 150px;
-  animation:starDriftA 470s linear infinite, starTwinkleA 9s ease-in-out infinite alternate;
+  animation:starDriftA var(--sd3,470s) linear infinite, starTwinkleA var(--tw3,9s) ease-in-out infinite alternate;
 }
 @keyframes starDriftA{to{transform:translate3d(-300px,150px,0)}}
 @keyframes starDriftB{to{transform:translate3d(210px,-105px,0)}}
@@ -1342,12 +1326,12 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
 @keyframes starTwinkleB{0%{opacity:.9}100%{opacity:.45}}
 /* occasional shooting star */
 .starfield .shoot{
-  inset:auto;top:12%;left:-12%;width:190px;height:1.6px;border-radius:2px;opacity:0;
+  inset:auto;top:12%;left:-14%;width:190px;height:1.6px;border-radius:2px;opacity:0;
   background:linear-gradient(90deg, transparent, rgba(255,255,255,.95));
   filter:drop-shadow(0 0 6px rgba(180,220,255,.9));
-  animation:shootStar 13s ease-in infinite;
+  animation:shootStar var(--shootdur,13s) ease-in infinite;
 }
-.starfield .shoot.b{top:38%;left:-18%;width:140px;animation-duration:19s;animation-delay:7s}
+
 @keyframes shootStar{
   0%,88%{opacity:0;transform:translate3d(0,0,0) rotate(18deg)}
   90%{opacity:1}
@@ -1364,3 +1348,35 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
 /* gantt blocks are editable — make that discoverable */
 .gblk.gclick{cursor:pointer}
 .gblk.gclick:hover{outline:2px solid var(--ink-strong);outline-offset:-1px}
+
+/* ============================================================
+   PAGE BACKGROUND — grid (default), your own image, or none.
+   Deliberately independent of the night sky, which layers on top.
+   ============================================================ */
+[data-bgpat="off"] body{background-image:none !important}
+[data-bgpat="image"] body{
+  background-image:
+    linear-gradient(rgba(0,0,0,var(--bgdim,.55)), rgba(0,0,0,var(--bgdim,.55))),
+    var(--bgimg, none) !important;
+  background-size:cover !important;
+  background-position:center center !important;
+  background-attachment:fixed !important;
+  background-repeat:no-repeat !important;
+}
+/* cartoon paints its own paper texture — honour the same switch */
+[data-bgpat="off"][data-style="toon"] body{background-image:none !important}
+[data-bgpat="off"][data-style="toon"][data-toon="pokemon"] body,
+[data-bgpat="off"][data-style="toon"][data-toon="shinchan"] body,
+[data-bgpat="off"][data-style="toon"][data-toon="ben10"] body{background-image:none !important}
+
+.bgimgrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+[data-bgpat="image"] .bgimgrow{display:flex}
+.bgimgrow{display:none}
+.dimwrap{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
+.dimwrap input[type=range],.rangewrap input[type=range]{width:120px;accent-color:var(--cyan)}
+.rangewrap{display:flex;align-items:center;gap:10px}
+.rangewrap span{
+  font-variant-numeric:tabular-nums;font-size:11px;color:var(--cyan);
+  min-width:46px;text-align:right;font-weight:600;
+}
+#starOverlay .setrow:first-child{padding-top:0}
