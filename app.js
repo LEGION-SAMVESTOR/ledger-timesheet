@@ -60,7 +60,7 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 
 /* ---------- settings ---------- */
 const PALETTE_DEFAULT = {bg:"#07090d", surface:"#101620", text:"#dbe7f0", muted:"#6d7f8f", accent:"#38e1ff"};
-const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", toonImages:{}, imgfx:"front", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", highlight:true, anim:true, askStart:true, seed:true, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
+const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", toonImages:{}, imgfx:"front", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", highlight:true, anim:true, stars:false, askStart:true, seed:true, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
 let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(LS_SET) || "{}"));
 settings.palette = Object.assign({}, PALETTE_DEFAULT, settings.palette||{});
 settings.toonImages = settings.toonImages || {};
@@ -323,6 +323,7 @@ function applySettings(){
   de.dataset.density = settings.density;
   de.dataset.hl = settings.highlight ? "on" : "off";
   de.dataset.anim = settings.anim ? "on" : "off";
+  de.dataset.stars = settings.stars ? "on" : "off";
   $("densitySeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.dn===settings.density));
   $("themeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.th===settings.theme));
   $("styleSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.sy===settings.style));
@@ -332,6 +333,7 @@ function applySettings(){
   $("hlSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.hl==="1")===!!settings.highlight));
   $("animSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.an==="1")===!!settings.anim));
   $("askStartSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.as==="1")===!!settings.askStart));
+  $("starSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.st==="1")===!!settings.stars));
   $("fontSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.fn===settings.font));
   $("sizeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.fs===settings.fsize));
   $("accentDots").querySelectorAll(".dot").forEach(b=>b.classList.toggle("on", b.dataset.ac===settings.accent));
@@ -360,6 +362,7 @@ $("densitySeg").addEventListener("click", e=>{ if(e.target.dataset.dn){ settings
 $("hlSeg").addEventListener("click", e=>{ if(e.target.dataset.hl!==undefined){ settings.highlight=e.target.dataset.hl==="1"; saveSettings(); }});
 $("animSeg").addEventListener("click", e=>{ if(e.target.dataset.an!==undefined){ settings.anim=e.target.dataset.an==="1"; saveSettings(); }});
 $("askStartSeg").addEventListener("click", e=>{ if(e.target.dataset.as!==undefined){ settings.askStart=e.target.dataset.as==="1"; saveSettings(); }});
+$("starSeg").addEventListener("click", e=>{ if(e.target.dataset.st!==undefined){ settings.stars=e.target.dataset.st==="1"; saveSettings(); }});
 $("accentDots").addEventListener("click", e=>{ const b=e.target.closest(".dot"); if(b){ settings.accent=b.dataset.ac; saveSettings(); }});
 $("seedSeg").addEventListener("click", e=>{ if(e.target.dataset.sd!==undefined){ settings.seed=e.target.dataset.sd==="1"; saveSettings(); }});
 $("remindSeg").addEventListener("click", e=>{
@@ -714,6 +717,7 @@ $("undoBtn").onclick = ()=>{
 
 /* ---------- timeblock modal ---------- */
 let blockCtx = null; // {i, mode:"start"|"manual"|"edit", sIdx}
+let gapsReturn = false;   // set when the block modal was opened from the gaps chart
 function openBlock(i, mode, sIdx){
   const t = tasks()[i];
   blockCtx = {i, mode, sIdx};
@@ -746,13 +750,15 @@ function openBlock(i, mode, sIdx){
   setTimeout(()=>$("bTask").select(),30);
 }
 function closeBlock(){ $("blockOverlay").classList.remove("show"); blockCtx=null; }
-$("bCancel").onclick = closeBlock;
+function cancelBlock(){ gapsReturn=false; closeBlock(); }
+$("bCancel").onclick = cancelBlock;
 $("blockOverlay").addEventListener("mousedown", e=>{ if(e.target===$("blockOverlay")) closeBlock(); });
 $("bDelete").onclick = ()=>{
   if(!blockCtx || blockCtx.mode!=="edit") return;
   if(!confirm("Delete this timeblock?")) return;
   tasks()[blockCtx.i].sessions.splice(blockCtx.sIdx,1);
   save(); closeBlock(); renderTable();
+  if(gapsReturn){ gapsReturn = false; $("gapsBtn").click(); }
 };
 $("blockModal").addEventListener("submit", e=>{
   e.preventDefault();
@@ -799,6 +805,7 @@ $("blockModal").addEventListener("submit", e=>{
     if(stopped.length) showUndo(stopped);
   }
   save(); closeBlock(); renderTable();
+  if(gapsReturn){ gapsReturn = false; $("gapsBtn").click(); }
 });
 
 /* ---------- edit modal ---------- */
@@ -1274,14 +1281,14 @@ $("gapsBtn").onclick = ()=>{
   let c = 0;
   orderedIndices(list).forEach(i=>{
     const t = list[i];
-    const blocks = t.sessions.map(s=>({lbl:s.task, a:toSec(s.start), b:toSec(s.end), live:false}))
-      .concat(t.live ? [{lbl:t.live.task, a:toSec(t.live.start), b:toSec(liveNow), live:true}] : [])
+    const blocks = t.sessions.map((s,si)=>({lbl:s.task, a:toSec(s.start), b:toSec(s.end), live:false, si}))
+      .concat(t.live ? [{lbl:t.live.task, a:toSec(t.live.start), b:toSec(liveNow), live:true, si:-1}] : [])
       .filter(b=>b.a!=null && b.b>b.a);
     if(!blocks.length) return;
     const col = GANTT_COLORS[c++ % GANTT_COLORS.length];
     const mins = Math.round(blocks.reduce((a,b)=>a+(b.b-b.a),0)/60);
     legend.push({col, project:t.project||t.brand||"—", mins});
-    blocks.forEach(b=>items.push(Object.assign({col, project:t.project, brand:t.brand}, b)));
+    blocks.forEach(b=>items.push(Object.assign({col, project:t.project, brand:t.brand, ti:i}, b)));
   });
   // greedy stacking so overlapping blocks stay visible without leaving the single track
   items.sort((x,y)=>x.a-y.a);
@@ -1295,14 +1302,22 @@ $("gapsBtn").onclick = ()=>{
   const lanes = Math.max(1, laneEnds.length);
   const laneH = 100/lanes;
   const blkHtml = items.map(it=>{
-    const tip = `${it.project||it.brand||"Task"}${it.lbl?" — "+it.lbl:""}\n${secToHM(it.a)} – ${secToHM(it.b)}${it.live?" (running)":""} · ${fmtMin((it.b-it.a)/60)}`;
-    return `<div class="gblk ${it.live?"livegblk":""}" title="${esc(tip)}" style="left:${pos(it.a)}%;width:${Math.max(0.35,(it.b-it.a)/span*100)}%;background:${it.col};top:calc(${it.lane*laneH}% + 3px);height:calc(${laneH}% - 6px)"><span class="gtxt">${esc(it.lbl||it.project||"")}</span></div>`;
+    const tip = `${it.project||it.brand||"Task"}${it.lbl?" — "+it.lbl:""}\n${secToHM(it.a)} – ${secToHM(it.b)}${it.live?" (running)":""} · ${fmtMin((it.b-it.a)/60)}
+Click to edit this block`;
+    return `<div class="gblk gclick ${it.live?"livegblk":""}" data-gedit="${it.ti}:${it.si}" title="${esc(tip)}" style="left:${pos(it.a)}%;width:${Math.max(0.35,(it.b-it.a)/span*100)}%;background:${it.col};top:calc(${it.lane*laneH}% + 3px);height:calc(${laneH}% - 6px)"><span class="gtxt">${esc(it.lbl||it.project||"")}</span></div>`;
   }).join("");
   const gapHtml = realGaps.map(([a,b])=>
     `<div class="gblk gapblk" title="${esc(`Untracked gap\n${secToHM(a)} – ${secToHM(b)} · ${fmtMin((b-a)/60)}`)}" style="left:${pos(a)}%;width:${Math.max(0.35,(b-a)/span*100)}%;top:3px;bottom:3px"><span class="gtxt">${(b-a)>=1200?fmtMin((b-a)/60):""}</span></div>`).join("");
   $("gapsChart").innerHTML =
     `<div class="gtrack">${ticks}${gapHtml}${blkHtml}</div>` +
     `<div class="gaxisrow">${axis}</div>`;
+  // clicking a block on the chart edits (or renames, if running) that timeblock
+  $("gapsChart").querySelectorAll("[data-gedit]").forEach(el=>el.onclick=()=>{
+    const [ti,si] = el.dataset.gedit.split(":").map(Number);
+    gapsReturn = true;
+    if(si < 0) openBlock(ti, "rename");
+    else openBlock(ti, "edit", si);
+  });
   $("gapsLegend").innerHTML = legend.map(l=>
     `<span class="lgitem"><span class="gdot" style="background:${l.col}"></span><b>${esc(l.project)}</b> ${fmtMin(l.mins)}</span>`).join("") +
     (realGaps.length?`<span class="lgitem"><span class="gdot" style="background:repeating-linear-gradient(-45deg,var(--red) 0 3px,transparent 3px 6px);box-shadow:inset 0 0 0 1px var(--red)"></span><b>Gaps</b> ${fmtMin(gapSec/60)}</span>`:"");
@@ -1322,22 +1337,27 @@ $("gapsClose").onclick = ()=>$("gapsOverlay").classList.remove("show");
 const secToHMS = s => `${String(Math.floor(s/3600)%24).padStart(2,"0")}:${String(Math.floor(s%3600/60)).padStart(2,"0")}:${String(Math.floor(s%60)).padStart(2,"0")}`;
 function openAssign(aSec,bSec){
   const list = tasks();
-  $("aEntry").innerHTML = orderedIndices(list).map(i=>{
-    const t=list[i];
-    return `<option value="${i}">${esc(t.brand||"Default Task")} · ${esc(t.project||"—")}</option>`;
-  }).join("");
+  // nothing preselected — the gap must be assigned deliberately
+  $("aEntry").innerHTML = `<option value="" selected disabled>— choose a task —</option>` +
+    orderedIndices(list).map(i=>{
+      const t=list[i];
+      return `<option value="${i}">${esc(t.brand||"Default Task")} · ${esc(t.project||"—")}</option>`;
+    }).join("");
+  $("aEntry").value = "";
   $("aTask").value = "";
   $("aStart").value = secToHMS(aSec);
   $("aEnd").value = secToHMS(bSec);
   $("aErr").textContent = "";
   $("assignOverlay").classList.add("show");
-  setTimeout(()=>$("aTask").focus(),30);
+  setTimeout(()=>$("aEntry").focus(),30);
 }
 $("aCancel").onclick = ()=>$("assignOverlay").classList.remove("show");
 $("assignOverlay").addEventListener("mousedown", e=>{ if(e.target===$("assignOverlay")) $("assignOverlay").classList.remove("show"); });
 $("assignModal").addEventListener("submit", e=>{
   e.preventDefault();
-  const t = tasks()[+$("aEntry").value];
+  const pick = $("aEntry").value;
+  if(pick===""){ $("aErr").textContent="Choose which task this gap belongs to."; $("aEntry").focus(); return; }
+  const t = tasks()[+pick];
   if(!t) return;
   const st=$("aStart").value, en=$("aEnd").value;
   if(!validT(st)||!validT(en)){ $("aErr").textContent="Times must be HH:MM (or HH:MM:SS)."; return; }
