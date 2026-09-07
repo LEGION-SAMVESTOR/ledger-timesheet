@@ -397,12 +397,40 @@
         <label class="rangewrap"><input type="range" id="scBright" min="20" max="150" step="5"><span id="scBrightV"></span></label>
       </div>
       <div class="setrow">
+        <div><div class="sl">Varied star sizes</div><div class="sd">Off makes every star the same size</div></div>
+        <div class="seg" id="scSizesSeg">
+          <button type="button" data-sz="1">ON</button>
+          <button type="button" data-sz="0">OFF</button>
+        </div>
+      </div>
+      <div class="setrow">
+        <div><div class="sl">Planets</div><div class="sd">A few slow drifting worlds</div></div>
+        <div class="seg" id="scPlanetSeg">
+          <button type="button" data-pl="1">ON</button>
+          <button type="button" data-pl="0">OFF</button>
+        </div>
+      </div>
+      <div class="setrow">
         <div><div class="sl">Shooting stars</div><div class="sd">How many streaks at once</div></div>
         <label class="rangewrap"><input type="range" id="scShoot" min="0" max="8" step="1"><span id="scShootV"></span></label>
       </div>
       <div class="setrow">
         <div><div class="sl">Shooting frequency</div><div class="sd">Seconds between streaks</div></div>
         <label class="rangewrap"><input type="range" id="scShootFreq" min="3" max="60" step="1"><span id="scShootFreqV"></span></label>
+      </div>
+      <div class="setrow">
+        <div><div class="sl">Meteor showers</div><div class="sd">Occasional burst of several streaks</div></div>
+        <div class="seg" id="scClusterSeg">
+          <button type="button" data-cl="1">ON</button>
+          <button type="button" data-cl="0">OFF</button>
+        </div>
+      </div>
+      <div class="setrow">
+        <div><div class="sl">Click for a wish</div><div class="sd">Clicking the page sends a shooting star from that spot</div></div>
+        <div class="seg" id="scClickSeg">
+          <button type="button" data-ck="1">ON</button>
+          <button type="button" data-ck="0">OFF</button>
+        </div>
       </div>
     </div>
     <div class="mbtns" style="margin-top:12px">

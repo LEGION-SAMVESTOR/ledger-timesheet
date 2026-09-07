@@ -62,11 +62,11 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 const PALETTE_DEFAULT = {bg:"#07090d", surface:"#101620", text:"#dbe7f0", muted:"#6d7f8f", accent:"#38e1ff"};
 const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", toonImages:{}, imgfx:"front", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", highlight:true, anim:true, stars:false, askStart:true, seed:true,
   bgpat:"grid", bgdim:55,
-  starCfg:{density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13}, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
+  starCfg:{density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true}, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
 let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(LS_SET) || "{}"));
 settings.palette = Object.assign({}, PALETTE_DEFAULT, settings.palette||{});
 settings.toonImages = settings.toonImages || {};
-settings.starCfg = Object.assign({density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13}, settings.starCfg||{});
+settings.starCfg = Object.assign({density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true}, settings.starCfg||{});
 
 /* ---------- background sprites: uploaded images (+ optional URLs) ----------
    Uploads live in their own localStorage key so settings stay small and fast
@@ -448,8 +448,9 @@ function buildStarfield(){
     const el = field.querySelector(L.el);
     if(!el) return;
     let img = [];
+    const fixedR = ((L.r[0]+L.r[1])/2).toFixed(2);
     for(let i=0;i<L.n;i++){
-      const r = rnd(L.r[0], L.r[1]).toFixed(2);
+      const r = c.sizes === false ? fixedR : rnd(L.r[0], L.r[1]).toFixed(2);
       const x = Math.round(rnd(0, L.tile)), y = Math.round(rnd(0, L.tile));
       const a = Math.min(1, rnd(L.a[0], L.a[1]) * bright).toFixed(2);
       const tint = Math.random() < .18 ? "255,240,214" : (Math.random() < .3 ? "214,238,255" : "255,255,255");
@@ -460,8 +461,9 @@ function buildStarfield(){
     field.style.setProperty("--sd" + L.v, (L.drift * 100 / (c.drift||100)).toFixed(0) + "s");
     field.style.setProperty("--tw" + L.v, (L.tw * 100 / (c.twinkle||100)).toFixed(2) + "s");
   });
+  buildPlanets(field, c);
   // shooting stars: one element per streak, staggered so they never fire together
-  field.querySelectorAll(".shoot").forEach(el=>el.remove());
+  field.querySelectorAll(".shoot:not(.once)").forEach(el=>el.remove());
   const n = Math.max(0, Math.min(8, c.shoot|0));
   for(let i=0;i<n;i++){
     const el = document.createElement("i");
@@ -473,9 +475,85 @@ function buildStarfield(){
     field.appendChild(el);
   }
 }
+
+/* planets: a few slow worlds, one of them ringed */
+const PLANET_LOOKS = [
+  {size:96,  a:"#c08457", b:"#5e3a22", ring:false, top:"18%", left:"6%",  dur:190},
+  {size:150, a:"#7fb3d5", b:"#1d3f5e", ring:true,  top:"58%", left:"72%", dur:260},
+  {size:64,  a:"#d9a7c7", b:"#5b2a4a", ring:false, top:"74%", left:"18%", dur:150},
+  {size:112, a:"#e8c37e", b:"#7a5312", ring:true,  top:"8%",  left:"58%", dur:320}
+];
+function buildPlanets(field, c){
+  field.querySelectorAll(".planet").forEach(el=>el.remove());
+  if(!c.planets) return;
+  PLANET_LOOKS.forEach((p,i)=>{
+    const el = document.createElement("i");
+    el.className = "planet" + (p.ring ? " ringed" : "");
+    el.style.cssText =
+      "width:"+p.size+"px;height:"+p.size+"px;top:"+p.top+";left:"+p.left+";" +
+      "background:radial-gradient(circle at 34% 30%, "+p.a+", "+p.b+" 72%, #05070b 100%);" +
+      "animation-duration:"+(p.dur*100/(c.drift||100)).toFixed(0)+"s;animation-delay:-"+(i*17)+"s";
+    field.appendChild(el);
+  });
+}
+
+/* a streak launched from a point — used by clicks and by meteor showers */
+function launchShootingStar(x, y, opts){
+  const field = $("starField");
+  if(!field || !settings.stars) return;
+  const o = opts || {};
+  const el = document.createElement("i");
+  el.className = "shoot once";
+  el.style.top = (y != null ? y + "px" : (5 + Math.random()*55) + "%");
+  el.style.left = (x != null ? x + "px" : "-10%");
+  el.style.width = Math.round(120 + Math.random()*140) + "px";
+  el.style.animationDuration = (o.dur || (0.9 + Math.random()*0.5)).toFixed(2) + "s";
+  if(o.delay) el.style.animationDelay = o.delay.toFixed(2) + "s";
+  el.addEventListener("animationend", ()=>el.remove());
+  field.appendChild(el);
+}
+// clicking anywhere sends one from that spot
+document.addEventListener("click", e=>{
+  if(!settings.stars || settings.starCfg.click === false) return;
+  if(e.target instanceof Element && e.target.closest("input,textarea,select,button,label,a,.overlay .modal")) return;
+  launchShootingStar(e.clientX, e.clientY);
+});
+// occasional meteor shower: a burst of streaks together
+setInterval(()=>{
+  const c = settings.starCfg;
+  if(!settings.stars || !c.cluster || !settings.anim) return;
+  if(Math.random() > 0.22) return;                    // roughly one burst every few minutes
+  const n = 3 + Math.floor(Math.random()*4);
+  const topPct = 4 + Math.random()*40;
+  for(let i=0;i<n;i++){
+    const el = document.createElement("i");
+    el.className = "shoot once";
+    el.style.top = (topPct + i*3.5 + Math.random()*2).toFixed(1) + "%";
+    el.style.left = (-14 - Math.random()*10) + "%";
+    el.style.width = Math.round(130 + Math.random()*120) + "px";
+    el.style.animationDuration = (1.0 + Math.random()*0.4).toFixed(2) + "s";
+    el.style.animationDelay = (i*0.16).toFixed(2) + "s";
+    el.addEventListener("animationend", ()=>el.remove());
+    $("starField").appendChild(el);
+  }
+}, 30000);
+
+const STAR_TOGGLES = {scSizesSeg:["sz","sizes"], scPlanetSeg:["pl","planets"], scClusterSeg:["cl","cluster"], scClickSeg:["ck","click"]};
+Object.entries(STAR_TOGGLES).forEach(([id,[attr,key]])=>{
+  $(id).addEventListener("click", e=>{
+    if(e.target.dataset[attr]===undefined) return;
+    settings.starCfg[key] = e.target.dataset[attr]==="1";
+    if(!settings.stars) settings.stars = true;
+    saveSettings();
+  });
+});
+
 const STAR_INPUTS = {scDensity:"density", scTwinkle:"twinkle", scDrift:"drift", scBright:"bright", scShoot:"shoot", scShootFreq:"shootFreq"};
 function syncStarInputs(){
   const c = settings.starCfg;
+  Object.entries(STAR_TOGGLES).forEach(([id,[attr,key]])=>{
+    $(id).querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset[attr]==="1") === (c[key]!==false)));
+  });
   const unit = {density:"", twinkle:"%", drift:"%", bright:"%", shoot:"", shootFreq:"s"};
   Object.entries(STAR_INPUTS).forEach(([id,key])=>{
     if(document.activeElement !== $(id)) $(id).value = c[key];
@@ -493,7 +571,7 @@ $("starCfgBtn").onclick = ()=>{ syncStarInputs(); $("starOverlay").classList.add
 $("starCfgClose").onclick = ()=>$("starOverlay").classList.remove("show");
 $("starOverlay").addEventListener("mousedown", e=>{ if(e.target===$("starOverlay")) $("starOverlay").classList.remove("show"); });
 $("starReset").onclick = ()=>{
-  settings.starCfg = {density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13};
+  settings.starCfg = {density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true};
   saveSettings();
 };
 
@@ -1519,6 +1597,7 @@ $("prevOverlay").addEventListener("mousedown", e=>{ if(e.target===$("prevOverlay
 const sessName = sessionStorage.getItem("ledger.session");
 if(sessName) enter(sessName);
 (function bootSequence(){
+  document.body.classList.add("booting");
   const LINES = [
     ["> mounting /ledger/core", "OK"],
     ["> loading timeblocks.db", "OK"],
@@ -1538,7 +1617,7 @@ if(sessName) enter(sessName);
       fill.style.width = Math.round(i/LINES.length*100) + "%";
       setTimeout(step, 110 + Math.random()*130);
     } else {
-      setTimeout(()=>{ $("boot").classList.add("hide"); }, 260);
+      setTimeout(()=>{ $("boot").classList.add("hide"); document.body.classList.remove("booting"); }, 260);
       setTimeout(()=>{ const b=$("boot"); if(b) b.remove(); }, 900);
     }
   }

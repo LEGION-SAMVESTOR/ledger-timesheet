@@ -1380,3 +1380,38 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
   min-width:46px;text-align:right;font-weight:600;
 }
 #starOverlay .setrow:first-child{padding-top:0}
+
+/* secondary dialogs open on top of a dialog that is already showing */
+#blockOverlay,#assignOverlay,#editOverlay,#starOverlay{z-index:140}
+
+/* the loading screen shares the page background — including the night sky */
+.boot{background:transparent}
+body.booting .login-wrap,body.booting .app{visibility:hidden}
+
+/* one-shot streaks: clicks and meteor showers */
+.starfield .shoot.once{
+  animation-name:shootOnce;animation-iteration-count:1;animation-fill-mode:forwards;
+}
+@keyframes shootOnce{
+  0%{opacity:0;transform:translate3d(0,0,0) rotate(18deg) scaleX(.2)}
+  12%{opacity:1;transform:translate3d(9vw,3vh,0) rotate(18deg) scaleX(1)}
+  100%{opacity:0;transform:translate3d(112vw,38vh,0) rotate(18deg) scaleX(1)}
+}
+/* planets */
+.starfield .planet{
+  position:absolute;inset:auto;border-radius:50%;
+  box-shadow:inset -10px -12px 26px rgba(0,0,0,.65), 0 0 30px rgba(140,180,255,.14);
+  opacity:.85;animation-name:planetDrift;animation-timing-function:linear;animation-iteration-count:infinite;
+}
+.starfield .planet.ringed::after{
+  content:"";position:absolute;left:50%;top:50%;width:190%;height:44%;
+  transform:translate(-50%,-50%) rotate(-19deg);
+  border:3px solid rgba(226,236,255,.42);border-radius:50%;
+  box-shadow:0 0 12px rgba(200,225,255,.25);
+}
+@keyframes planetDrift{
+  from{transform:translate3d(0,0,0)}
+  to{transform:translate3d(-14vw,9vh,0)}
+}
+[data-anim="off"] .starfield .planet{animation:none}
+@media (prefers-reduced-motion: reduce){ .starfield .planet{animation:none} }
