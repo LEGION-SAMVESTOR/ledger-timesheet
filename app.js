@@ -66,11 +66,11 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 const PALETTE_DEFAULT = {bg:"#07090d", surface:"#101620", text:"#dbe7f0", muted:"#6d7f8f", accent:"#38e1ff"};
 const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", toonImages:{}, imgfx:"front", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", highlight:true, anim:true, stars:false, askStart:true, seed:true,
   bgpat:"grid", bgdim:55,
-  starCfg:{density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true}, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
+  starCfg:{density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true, moon:true, constellations:true}, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
 let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(LS_SET) || "{}"));
 settings.palette = Object.assign({}, PALETTE_DEFAULT, settings.palette||{});
 settings.toonImages = settings.toonImages || {};
-settings.starCfg = Object.assign({density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true}, settings.starCfg||{});
+settings.starCfg = Object.assign({density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true, moon:true, constellations:true}, settings.starCfg||{});
 
 /* ---------- background sprites: uploaded images (+ optional URLs) ----------
    Uploads live in their own localStorage key so settings stay small and fast
@@ -436,6 +436,91 @@ $("bgPatSeg").addEventListener("click", e=>{
 });
 $("bgDim").addEventListener("input", ()=>{ settings.bgdim = +$("bgDim").value; saveSettings(); });
 
+
+/* ---------- moon (real phase) + constellations ---------- */
+// days since a known new moon, folded into the 29.53-day synodic month
+function moonPhase(d){
+  const synodic = 29.530588853;
+  const known = Date.UTC(2000,0,6,18,14);           // new moon, 6 Jan 2000
+  const days = ((d||new Date()).getTime() - known) / 86400000;
+  let p = (days % synodic) / synodic;
+  if(p < 0) p += 1;
+  return p;                                          // 0 new · .25 first quarter · .5 full · .75 last
+}
+function moonName(p){
+  if(p < .02 || p > .98) return "New moon";
+  if(p < .23) return "Waxing crescent";
+  if(p < .27) return "First quarter";
+  if(p < .48) return "Waxing gibbous";
+  if(p < .52) return "Full moon";
+  if(p < .73) return "Waning gibbous";
+  if(p < .77) return "Last quarter";
+  return "Waning crescent";
+}
+// lit region of the disc: outer semicircle closed by the terminator ellipse
+function moonSvg(p){
+  const lit = (1 - Math.cos(2*Math.PI*p)) / 2;       // illuminated fraction
+  const rx = Math.abs(1 - 2*lit).toFixed(4);
+  const bulge = lit > .5 ? 1 : 0;
+  const path = `M0,-1 A1,1 0 0,1 0,1 A${rx},1 0 0,${bulge} 0,-1 Z`;
+  const waning = p > .5;                             // lit side flips after full
+  return `<svg viewBox="-1.08 -1.08 2.16 2.16" class="moonsvg">
+    <defs>
+      <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="55%" stop-color="rgba(226,238,255,.30)"/>
+        <stop offset="100%" stop-color="rgba(226,238,255,0)"/>
+      </radialGradient>
+    </defs>
+    <circle r="1.06" fill="url(#moonGlow)"/>
+    <circle r="1" fill="rgba(150,170,200,.16)"/>
+    <g transform="scale(${waning ? -1 : 1},1)">
+      <path d="${path}" fill="#eef3ff"/>
+    </g>
+    <circle cx="-.34" cy="-.28" r=".17" fill="rgba(120,140,175,.20)"/>
+    <circle cx=".22" cy=".34" r=".22" fill="rgba(120,140,175,.16)"/>
+    <circle cx=".38" cy="-.42" r=".11" fill="rgba(120,140,175,.18)"/>
+  </svg>`;
+}
+// a few small patterns, drawn as joined dots and breathed in and out
+const CONSTELLATIONS = [
+  {pts:[[8,52],[26,30],[46,38],[62,16],[80,26],[70,54],[44,64]], top:"12%", left:"7%",  size:230, dur:34},
+  {pts:[[10,20],[32,10],[54,26],[74,12],[88,34],[60,46],[34,44]], top:"58%", left:"64%", size:190, dur:44},
+  {pts:[[12,14],[30,44],[52,54],[74,34],[86,62]],                 top:"70%", left:"12%", size:150, dur:39},
+  {pts:[[14,60],[36,46],[58,58],[78,40],[92,60],[58,58]],         top:"18%", left:"72%", size:170, dur:50}
+];
+function constellationSvg(c){
+  const line = c.pts.map((p,i)=>(i?"L":"M")+p[0]+","+p[1]).join(" ");
+  const dots = c.pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="1.7"/>`).join("");
+  return `<svg viewBox="0 0 100 72" class="constsvg" style="width:${c.size}px">
+    <path d="${line}" class="cline"/>
+    <g class="cdots">${dots}</g>
+  </svg>`;
+}
+function buildSkyExtras(){
+  const host = $("skyExtras");
+  if(!host) return;
+  const c = settings.starCfg;
+  host.innerHTML = "";
+  if(!settings.stars) return;
+  if(c.moon){
+    const p = moonPhase();
+    const el = document.createElement("div");
+    el.className = "moon";
+    el.title = moonName(p) + " · " + Math.round((1 - Math.cos(2*Math.PI*p))/2*100) + "% lit";
+    el.innerHTML = moonSvg(p);
+    host.appendChild(el);
+  }
+  if(c.constellations){
+    CONSTELLATIONS.forEach((cn,i)=>{
+      const el = document.createElement("div");
+      el.className = "constel";
+      el.style.cssText = `top:${cn.top};left:${cn.left};animation-duration:${(cn.dur*100/(c.drift||100)).toFixed(0)}s;animation-delay:-${i*9}s`;
+      el.innerHTML = constellationSvg(cn);
+      host.appendChild(el);
+    });
+  }
+}
+
 /* ---------- starfield generation ---------- */
 function buildStarfield(){
   const c = settings.starCfg;
@@ -466,6 +551,7 @@ function buildStarfield(){
     field.style.setProperty("--tw" + L.v, (L.tw * 100 / (c.twinkle||100)).toFixed(2) + "s");
   });
   buildPlanets(field, c);
+  buildSkyExtras();
   // shooting stars: one element per streak, staggered so they never fire together
   field.querySelectorAll(".shoot:not(.once)").forEach(el=>el.remove());
   const n = Math.max(0, Math.min(8, c.shoot|0));
@@ -542,7 +628,7 @@ setInterval(()=>{
   }
 }, 30000);
 
-const STAR_TOGGLES = {scSizesSeg:["sz","sizes"], scPlanetSeg:["pl","planets"], scClusterSeg:["cl","cluster"], scClickSeg:["ck","click"]};
+const STAR_TOGGLES = {scSizesSeg:["sz","sizes"], scPlanetSeg:["pl","planets"], scClusterSeg:["cl","cluster"], scClickSeg:["ck","click"], scMoonSeg:["mn","moon"], scConstSeg:["cn","constellations"]};
 Object.entries(STAR_TOGGLES).forEach(([id,[attr,key]])=>{
   $(id).addEventListener("click", e=>{
     if(e.target.dataset[attr]===undefined) return;
@@ -575,7 +661,7 @@ $("starCfgBtn").onclick = ()=>{ syncStarInputs(); $("starOverlay").classList.add
 $("starCfgClose").onclick = ()=>$("starOverlay").classList.remove("show");
 $("starOverlay").addEventListener("mousedown", e=>{ if(e.target===$("starOverlay")) $("starOverlay").classList.remove("show"); });
 $("starReset").onclick = ()=>{
-  settings.starCfg = {density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true};
+  settings.starCfg = {density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true, moon:true, constellations:true};
   saveSettings();
 };
 

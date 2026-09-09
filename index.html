@@ -46,6 +46,7 @@
 
 <div class="bgfx" id="bgFx" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
 <div class="starfield" id="starField" aria-hidden="true"><i class="s1"></i><i class="s2"></i><i class="s3"></i><i class="shoot"></i><i class="shoot b"></i></div>
+<div class="skyextras" id="skyExtras" aria-hidden="true"></div>
 
 <div class="boot" id="boot">
   <div class="boot-inner">
@@ -88,11 +89,11 @@
   </header>
 
   <nav class="pagenav" id="pageNav">
-    <button class="navtab active" data-page="timesheet">▦ Timesheet</button>
-    <button class="navtab" data-page="dashboard">◍ Dashboard</button>
-    <button class="navtab" data-page="table">☰ Table</button>
-    <button class="navtab" data-page="sheet">▤ Day sheet</button>
-    <button class="navtab" data-page="routines">⟳ Routines</button>
+    <button class="navtab daytab active" data-page="timesheet">▦ Timesheet</button>
+    <button class="navtab daytab" data-page="dashboard">◍ Dashboard</button>
+    <button class="navtab daytab" data-page="table">☰ Table</button>
+    <button class="navtab daytab" data-page="sheet">▤ Day sheet</button>
+    <button class="navtab daytab" data-page="routines">⟳ Routines</button>
   </nav>
 
   <section class="page" id="pageTimesheet">
@@ -161,10 +162,10 @@
     </div>
 
     <div class="kpigrid">
-      <div class="kpi"><div class="kl">Total logged</div><div class="kv" id="kpiTotal">0.00</div><div class="ks" id="kpiTotalSub">—</div></div>
-      <div class="kpi"><div class="kl">Daily average</div><div class="kv" id="kpiAvg">0.00</div><div class="ks" id="kpiAvgSub">—</div></div>
-      <div class="kpi"><div class="kl">Biggest brand</div><div class="kv" id="kpiTop">—</div><div class="ks" id="kpiTopSub">—</div></div>
-      <div class="kpi"><div class="kl">Client vs default</div><div class="kv" id="kpiSplit">—</div><div class="ks" id="kpiSplitSub">—</div></div>
+      <div class="kpi stat"><div class="l">Total logged</div><div class="v" id="kpiTotal">0.00</div><div class="ks" id="kpiTotalSub">—</div></div>
+      <div class="kpi stat"><div class="l">Daily average</div><div class="v" id="kpiAvg">0.00</div><div class="ks" id="kpiAvgSub">—</div></div>
+      <div class="kpi stat"><div class="l">Biggest brand</div><div class="v" id="kpiTop">—</div><div class="ks" id="kpiTopSub">—</div></div>
+      <div class="kpi stat"><div class="l">Client vs default</div><div class="v" id="kpiSplit">—</div><div class="ks" id="kpiSplitSub">—</div></div>
     </div>
 
     <div class="dashgrid">
@@ -205,7 +206,7 @@
         <button type="button" data-rg="year">YEAR</button>
         <button type="button" data-rg="all">ALL</button>
       </div>
-      <input id="tblSearch" class="tblsearch" placeholder="Filter brand, project or task…" spellcheck="false">
+      <div class="field tblfield"><input id="tblSearch" placeholder="Filter brand, project or task…" spellcheck="false"></div>
       <span class="spacer"></span>
       <button class="btn small" id="tblCopy">⧉ Copy rows</button>
     </div>
@@ -562,6 +563,20 @@
         <div class="seg" id="scSizesSeg">
           <button type="button" data-sz="1">ON</button>
           <button type="button" data-sz="0">OFF</button>
+        </div>
+      </div>
+      <div class="setrow">
+        <div><div class="sl">Moon</div><div class="sd">Shows tonight&rsquo;s real lunar phase</div></div>
+        <div class="seg" id="scMoonSeg">
+          <button type="button" data-mn="1">ON</button>
+          <button type="button" data-mn="0">OFF</button>
+        </div>
+      </div>
+      <div class="setrow">
+        <div><div class="sl">Constellations</div><div class="sd">Faint joined star patterns that drift in and out</div></div>
+        <div class="seg" id="scConstSeg">
+          <button type="button" data-cn="1">ON</button>
+          <button type="button" data-cn="0">OFF</button>
         </div>
       </div>
       <div class="setrow">

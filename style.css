@@ -1420,34 +1420,15 @@ body.booting .login-wrap,body.booting .app{visibility:hidden}
    PAGES — nav, dashboard, table, day sheet, routines
    ============================================================ */
 .pagenav{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0 6px}
-.navtab{
-  border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 18px;
-  color:var(--ink-soft);font-size:12px;letter-spacing:.06em;transition:.15s;
-  font-family:"Chakra Petch",sans-serif;font-weight:600;
-}
-.navtab:hover{border-color:var(--line-strong);color:var(--ink)}
-.navtab.active{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-dim);box-shadow:0 0 16px -8px var(--cyan)}
 .page[hidden]{display:none}
 
 .rangebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:18px 0 14px}
 .rangebar .spacer{flex:1}
 .rangenote{font-size:11px;color:var(--ink-soft);letter-spacing:.06em}
 .seg.small button{padding:5px 11px;font-size:10.5px}
-.tblsearch{
-  padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);
-  color:var(--ink);font-size:12px;min-width:230px;flex:0 1 320px;
-}
 
 /* KPI strip */
 .kpigrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px}
-.kpi{
-  background:var(--panel);border-radius:var(--radius);padding:16px 18px;
-  box-shadow:0 0 0 1px var(--line);position:relative;overflow:hidden;
-}
-.kpi::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--cyan);opacity:.45}
-.kpi .kl{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);font-family:"Chakra Petch",sans-serif;font-weight:600}
-.kpi .kv{font-family:"Chakra Petch",sans-serif;font-size:30px;font-weight:700;color:var(--ink-strong);line-height:1.15;margin-top:4px;font-variant-numeric:tabular-nums}
-.kpi .ks{font-size:11px;color:var(--ink-soft);margin-top:2px}
 
 .dashgrid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
 @media(max-width:1080px){.dashgrid{grid-template-columns:1fr}}
@@ -1521,3 +1502,51 @@ body.booting .login-wrap,body.booting .app{visibility:hidden}
 .rtorder{display:flex;gap:4px}
 .rtorder button{padding:2px 7px;font-size:11px}
 .rtoff td{opacity:.45}
+
+/* ---- page components ride on the already-themed primitives ---- */
+.pagenav .navtab{padding:9px 18px}
+.kpi{padding:16px 18px !important;text-align:left !important;min-width:0 !important}
+.kpi .l{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft)}
+.kpi .v{font-size:30px;line-height:1.15;margin-top:4px}
+.kpi .ks{font-size:11px;color:var(--ink-soft);margin-top:3px}
+.tblfield{margin:0 !important;flex:0 1 320px;min-width:210px}
+.tblfield input{width:100%;font-size:12px}
+/* progress tracks follow the same treatment as the day-target bar */
+.dbrow .dbt,.rkrow .rkbar{background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--line)}
+[data-style="neo"] .dbrow .dbt,[data-style="neo"] .rkrow .rkbar{
+  box-shadow:inset 3px 3px 6px var(--neo-lo), inset -3px -3px 6px var(--neo-hi);background:var(--bg)}
+[data-style="brutal"] .dbrow .dbt,[data-style="brutal"] .rkrow .rkbar{
+  border:2px solid var(--ink-strong);border-radius:3px;box-shadow:none}
+[data-style="toon"] .dbrow .dbt,[data-style="toon"] .rkrow .rkbar{
+  border:2.5px solid var(--toon-out);border-radius:999px;box-shadow:none}
+[data-style="glass"] .dbrow .dbt,[data-style="glass"] .rkrow .rkbar{
+  background:color-mix(in srgb, var(--ink) 10%, transparent);box-shadow:none;
+  border:1px solid color-mix(in srgb, var(--ink) 16%, transparent)}
+[data-style="flat"] .dbrow .dbt,[data-style="flat"] .rkrow .rkbar{border-radius:3px}
+/* donut ring + empty states pick up the theme surfaces */
+[data-style="brutal"] .donut circle{stroke-width:6}
+[data-style="toon"] .donut circle{stroke-width:6.4}
+[data-style="toon"] .cardhead h2,[data-style="toon"] .kpi .v{font-family:"Fredoka",system-ui,sans-serif}
+[data-style="brutal"] .emptycard,[data-style="toon"] .emptycard{border:2px dashed var(--line-strong);border-radius:6px}
+
+/* ---------- moon + constellations ---------- */
+.skyextras{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;display:none}
+[data-stars="on"] .skyextras{display:block}
+.moon{position:absolute;top:7%;right:8%;width:120px;height:120px;animation:moonDrift 320s linear infinite}
+.moonsvg{width:100%;height:100%;filter:drop-shadow(0 0 22px rgba(200,220,255,.35))}
+@keyframes moonDrift{from{transform:translate3d(0,0,0)}to{transform:translate3d(-9vw,7vh,0)}}
+.constel{position:absolute;opacity:0;animation-name:constBreathe;animation-timing-function:ease-in-out;animation-iteration-count:infinite}
+.constsvg{height:auto;overflow:visible}
+.constsvg .cline{fill:none;stroke:rgba(190,220,255,.42);stroke-width:.5;stroke-linecap:round;stroke-linejoin:round}
+.constsvg .cdots circle{fill:rgba(255,255,255,.92);filter:drop-shadow(0 0 3px rgba(190,220,255,.9))}
+@keyframes constBreathe{0%,72%,100%{opacity:0}18%,54%{opacity:.85}}
+[data-theme="light"] .skyextras{opacity:.3;filter:invert(1) brightness(.6)}
+[data-style="toon"] .skyextras{opacity:.32;filter:invert(1) brightness(.65)}
+[data-style="toon"][data-toon="ben10"] .skyextras{opacity:1;filter:none}
+[data-anim="off"] .moon,[data-anim="off"] .constel{animation:none}
+[data-anim="off"] .constel{opacity:.7}
+@media (prefers-reduced-motion: reduce){
+  .moon,.constel{animation:none}
+  .constel{opacity:.7}
+}
+@media(max-width:720px){ .moon{width:84px;height:84px} }
