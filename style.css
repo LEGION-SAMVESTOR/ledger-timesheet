@@ -469,9 +469,6 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
   margin:0 -6px;padding:0 14px 2px 6px;   /* right padding keeps the scrollbar clear of content */
   scrollbar-gutter:stable;
 }
-.mbody::-webkit-scrollbar{width:8px}
-.mbody::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:99px}
-.mbody::-webkit-scrollbar-track{background:transparent}
 .modal .mrow{display:flex;gap:10px}
 .modal .mrow .field{flex:1}
 .modal .mbtns{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
@@ -1139,7 +1136,6 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
 [data-style="toon"] .overlay{background:rgba(26,21,18,.45)}
 [data-style="toon"] .swatches input[type=color]{border:2.5px solid var(--toon-out);border-radius:9px;box-shadow:2px 2px 0 var(--toon-shadow)}
 [data-style="toon"] .setrow{border-bottom:2px dashed color-mix(in srgb, var(--ink) 22%, transparent)}
-[data-style="toon"] .mbody::-webkit-scrollbar-thumb{background:var(--toon-out);border-radius:99px}
 [data-style="toon"] .seg button.on{background:var(--cyan);color:var(--accent-ink)}
 [data-style="toon"] .sheet th{
   background:var(--cyan);color:var(--accent-ink);border-bottom:3px solid var(--toon-out);
@@ -1592,3 +1588,85 @@ body.booting .login-wrap,body.booting .app{visibility:hidden}
 [data-style="toon"] .aspanel{border:3px solid var(--toon-out);box-shadow:7px 8px 0 var(--toon-shadow)}
 [data-style="glass"] .aspanel{background:color-mix(in srgb, var(--panel-solid) 92%, transparent)}
 @media(max-width:640px){ .assist{right:14px;bottom:14px} }
+
+/* ============================================================
+   SCROLLBARS — themed everywhere, page included
+   ============================================================ */
+*{scrollbar-width:thin;scrollbar-color:var(--cyan) transparent}
+::-webkit-scrollbar{width:12px;height:12px}
+::-webkit-scrollbar-track{
+  background:color-mix(in srgb, var(--ink) 6%, transparent);
+  border-radius:99px;
+}
+::-webkit-scrollbar-thumb{
+  border-radius:99px;border:3px solid transparent;background-clip:content-box;
+  background-color:color-mix(in srgb, var(--cyan) 55%, transparent);
+  transition:background-color .18s;
+}
+::-webkit-scrollbar-thumb:hover{background-color:var(--cyan)}
+::-webkit-scrollbar-corner{background:transparent}
+/* the page rail gets a little more presence than inner panes */
+html::-webkit-scrollbar{width:14px}
+html::-webkit-scrollbar-track{background:color-mix(in srgb, var(--ink) 4%, transparent)}
+html::-webkit-scrollbar-thumb{
+  background-color:color-mix(in srgb, var(--cyan) 62%, transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--cyan) 40%, transparent);
+}
+html::-webkit-scrollbar-thumb:hover{background-color:var(--cyan);box-shadow:0 0 14px -2px var(--cyan)}
+
+/* per design mode */
+[data-style="neo"] ::-webkit-scrollbar-track{
+  background:var(--bg);box-shadow:inset 2px 2px 5px var(--neo-lo), inset -2px -2px 5px var(--neo-hi)}
+[data-style="neo"] ::-webkit-scrollbar-thumb{
+  background-color:var(--bg);border-width:2px;
+  box-shadow:2px 2px 5px var(--neo-lo), -2px -2px 5px var(--neo-hi)}
+[data-style="brutal"] ::-webkit-scrollbar{width:14px}
+[data-style="brutal"] ::-webkit-scrollbar-track{background:var(--panel-2);border-radius:0;box-shadow:inset 0 0 0 2px var(--ink-strong)}
+[data-style="brutal"] ::-webkit-scrollbar-thumb{
+  border-radius:0;border-width:2px;background-color:var(--cyan);
+  box-shadow:inset 0 0 0 2px var(--ink-strong)}
+[data-style="toon"] ::-webkit-scrollbar{width:14px}
+[data-style="toon"] ::-webkit-scrollbar-track{background:var(--panel-2);border-radius:99px;box-shadow:inset 0 0 0 2px var(--toon-out)}
+[data-style="toon"] ::-webkit-scrollbar-thumb{
+  border-radius:99px;border-width:2px;background-color:var(--cyan);
+  box-shadow:inset 0 0 0 2px var(--toon-out)}
+[data-style="glass"] ::-webkit-scrollbar-thumb{
+  background-color:color-mix(in srgb, var(--ink) 26%, transparent);
+  backdrop-filter:blur(6px)}
+[data-style="glass"] ::-webkit-scrollbar-thumb:hover{background-color:color-mix(in srgb, var(--cyan) 70%, transparent)}
+[data-style="flat"] ::-webkit-scrollbar{width:10px}
+[data-style="flat"] ::-webkit-scrollbar-track{background:var(--panel-2);border-radius:0}
+[data-style="flat"] ::-webkit-scrollbar-thumb{border-radius:0;border-width:2px;background-color:var(--cyan)}
+
+/* ---------- assistant: console mode ---------- */
+[data-ascon="on"] .aspanel{
+  background:color-mix(in srgb, #04070a 88%, var(--panel-solid));
+  border:1px solid var(--cyan);box-shadow:0 0 0 1px var(--line), 0 18px 46px -18px rgba(0,0,0,.8), inset 0 0 40px -22px var(--cyan);
+  width:min(430px,90vw);
+}
+[data-ascon="on"] .ashead{border-bottom:1px solid color-mix(in srgb, var(--cyan) 35%, transparent);color:var(--cyan)}
+[data-ascon="on"] .aslog{
+  font-family:ui-monospace,"IBM Plex Mono",Consolas,monospace;font-size:11.5px;line-height:1.7;gap:2px;
+  background:repeating-linear-gradient(0deg, transparent 0 3px, color-mix(in srgb, var(--cyan) 4%, transparent) 3px 4px);
+}
+[data-ascon="on"] .asmsg{
+  background:none !important;padding:1px 0;border-radius:0;max-width:100%;
+  color:color-mix(in srgb, var(--cyan) 78%, var(--ink));
+}
+[data-ascon="on"] .asmsg.you{align-self:stretch;color:var(--ink-strong);font-weight:500}
+[data-ascon="on"] .asmsg.you::before{content:"› ";color:var(--cyan);font-weight:700}
+[data-ascon="on"] .asmsg.ok::before{content:"· ";color:color-mix(in srgb, var(--cyan) 60%, transparent)}
+[data-ascon="on"] .asmsg.warn{color:var(--amber)}
+[data-ascon="on"] .asmsg.warn::before{content:"! ";font-weight:700}
+[data-ascon="on"] .asform{border-top:1px solid color-mix(in srgb, var(--cyan) 35%, transparent);position:relative;align-items:center}
+[data-ascon="on"] .asform::before{
+  content:"›";position:absolute;left:16px;color:var(--cyan);font-weight:700;
+  font-family:ui-monospace,monospace;pointer-events:none;
+}
+[data-ascon="on"] .asform input{
+  font-family:ui-monospace,"IBM Plex Mono",Consolas,monospace;background:transparent;
+  border:none;border-radius:0;padding-left:18px;color:var(--cyan);caret-color:var(--cyan);
+}
+[data-ascon="on"] .asform input:focus{outline:none}
+[data-ascon="on"] .asbtn{border-radius:8px;font-family:ui-monospace,monospace}
+.ashint{color:var(--ink-soft);font-size:10.5px;letter-spacing:.04em}

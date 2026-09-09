@@ -64,7 +64,7 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 
 /* ---------- settings ---------- */
 const PALETTE_DEFAULT = {bg:"#07090d", surface:"#101620", text:"#dbe7f0", muted:"#6d7f8f", accent:"#38e1ff"};
-const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", toonImages:{}, imgfx:"front", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", highlight:true, anim:true, stars:false, askStart:true, seed:true,
+const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", toonImages:{}, imgfx:"front", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", highlight:true, anim:true, stars:false, askStart:true, asConsole:false, seed:true,
   bgpat:"grid", bgdim:55,
   starCfg:{density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true, moon:true, constellations:false}, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
 let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(LS_SET) || "{}"));
@@ -331,6 +331,7 @@ function applySettings(){
   de.dataset.hl = settings.highlight ? "on" : "off";
   de.dataset.anim = settings.anim ? "on" : "off";
   de.dataset.stars = settings.stars ? "on" : "off";
+  de.dataset.ascon = settings.asConsole ? "on" : "off";
   de.dataset.bgpat = settings.bgpat;
   $("densitySeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.dn===settings.density));
   $("themeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.th===settings.theme));
@@ -341,6 +342,7 @@ function applySettings(){
   $("hlSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.hl==="1")===!!settings.highlight));
   $("animSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.an==="1")===!!settings.anim));
   $("askStartSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.as==="1")===!!settings.askStart));
+  $("asStyleSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.ac==="console")===!!settings.asConsole));
   $("starSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", (b.dataset.st==="1")===!!settings.stars));
   $("bgPatSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.bp===settings.bgpat));
   if(document.activeElement!==$("bgDim")) $("bgDim").value = settings.bgdim;
@@ -375,6 +377,7 @@ $("densitySeg").addEventListener("click", e=>{ if(e.target.dataset.dn){ settings
 $("hlSeg").addEventListener("click", e=>{ if(e.target.dataset.hl!==undefined){ settings.highlight=e.target.dataset.hl==="1"; saveSettings(); }});
 $("animSeg").addEventListener("click", e=>{ if(e.target.dataset.an!==undefined){ settings.anim=e.target.dataset.an==="1"; saveSettings(); }});
 $("askStartSeg").addEventListener("click", e=>{ if(e.target.dataset.as!==undefined){ settings.askStart=e.target.dataset.as==="1"; saveSettings(); }});
+$("asStyleSeg").addEventListener("click", e=>{ if(e.target.dataset.ac){ settings.asConsole = e.target.dataset.ac==="console"; saveSettings(); }});
 $("starSeg").addEventListener("click", e=>{ if(e.target.dataset.st!==undefined){ settings.stars=e.target.dataset.st==="1"; saveSettings(); }});
 $("accentDots").addEventListener("click", e=>{ const b=e.target.closest(".dot"); if(b){ settings.accent=b.dataset.ac; saveSettings(); }});
 $("seedSeg").addEventListener("click", e=>{ if(e.target.dataset.sd!==undefined){ settings.seed=e.target.dataset.sd==="1"; saveSettings(); }});
@@ -2070,6 +2073,12 @@ function assistSay(text, kind){
   log.appendChild(row);
   log.scrollTop = log.scrollHeight;
 }
+function assistRemember(text){
+  if(!text) return;
+  if(asHistory[0] !== text) asHistory.unshift(text);
+  if(asHistory.length > 40) asHistory.length = 40;
+  asHistIdx = -1;
+}
 function assistEcho(text){
   const log = $("asLog");
   const row = document.createElement("div");
@@ -2096,6 +2105,9 @@ function assistRun(raw){
   assistEcho(q);
   const low = q.toLowerCase();
   let m;
+
+  // the extended command set gets first refusal
+  if(typeof assistExtra === "function" && assistExtra(q, low)) return;
 
   if(/^(help|\?|what can you do)/.test(low)){
     assistSay("Try any of these:<br>" + ASSIST_HELP.map(h=>`<b>${esc(h[0])}</b> — ${esc(h[1])}`).join("<br>"));
@@ -2245,10 +2257,162 @@ $("asClose").onclick = ()=>{ $("asPanel").classList.remove("show"); $("asBtn").c
 $("asForm").addEventListener("submit", e=>{
   e.preventDefault();
   const v = $("asInput").value;
+  assistRemember(v.trim());
   $("asInput").value = "";
   try{ assistRun(v); }
   catch(err){ assistSay("That went wrong: " + esc(String(err.message || err)), "warn"); }
 });
+
+
+/* ---------- assistant: extra commands, history, console mode ---------- */
+const ASSIST_HELP2 = [
+  ["delete homepage",              "remove the task and its blocks"],
+  ["clear blocks on homepage",     "empty its timeblocks, keep the task"],
+  ["undo block on homepage",       "drop only its most recent block"],
+  ["rename homepage to Homepage V2", "rename a task"],
+  ["move homepage to RW",          "change its brand"],
+  ["note homepage awaiting assets", "set the task note"],
+  ["hours meeting 2",              "set manual hours on a task with no blocks"],
+  ["find template",                "search the table"],
+  ["theme light · design toon · stars on · console on", "flip settings"],
+  ["carry over",                   "pull yesterday's unfinished work"],
+  ["clear",                        "wipe the console"]
+];
+let asHistory = [], asHistIdx = -1;
+
+// remember what was typed, so ↑/↓ walks back through it
+$("asInput").addEventListener("keydown", e=>{
+  if(e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+  if(!asHistory.length) return;
+  e.preventDefault();
+  if(e.key === "ArrowUp") asHistIdx = Math.min(asHistIdx + 1, asHistory.length - 1);
+  else asHistIdx = Math.max(asHistIdx - 1, -1);
+  $("asInput").value = asHistIdx < 0 ? "" : asHistory[asHistIdx];
+  const el = $("asInput");
+  setTimeout(()=>el.setSelectionRange(el.value.length, el.value.length), 0);
+});
+
+function assistExtra(q, low){
+  let m;
+
+  if(low === "clear"){ $("asLog").innerHTML = ""; return true; }
+
+  if(/^(help|\?|commands)$/.test(low)){
+    assistSay("Also try:<br>" + ASSIST_HELP2.map(h=>`<b>${esc(h[0])}</b> — ${esc(h[1])}`).join("<br>"));
+    return false;   // let the base help print first
+  }
+
+  // delete a task outright
+  m = low.match(/^(?:delete|remove|drop)\s+(?:task\s+)?(.+)$/);
+  if(m && !/^last block/.test(m[1]) && !/^block/.test(m[1])){
+    const t = assistFind(m[1]);
+    if(!t){ assistSay("No task matches “" + esc(m[1]) + "”.", "warn"); return true; }
+    const list = tasks(), i = list.indexOf(t);
+    const mins = dayBlocks(todayKey()).filter(b=>b.project===t.project).reduce((a,b)=>a+b.mins,0);
+    list.splice(i,1); save(); render();
+    assistSay("Deleted <b>" + esc(t.project) + "</b>" + (mins ? " and its " + asHrs(mins) + " h" : "") + ".");
+    return true;
+  }
+
+  // empty the blocks but keep the task
+  m = low.match(/^(?:clear|empty|reset)\s+(?:blocks?\s+(?:on|from|for)\s+|timeblocks?\s+(?:on|from|for)\s+)?(.+)$/);
+  if(m){
+    const t = assistFind(m[1]);
+    if(t){
+      const n = t.sessions.length + (t.live ? 1 : 0);
+      if(!n && t.manualHours == null){ assistSay("<b>" + esc(t.project) + "</b> has nothing logged.", "warn"); return true; }
+      t.sessions = []; t.live = null; t.manualHours = null;
+      save(); render();
+      assistSay("Cleared <b>" + n + "</b> block" + (n===1?"":"s") + " from <b>" + esc(t.project) + "</b>.");
+      return true;
+    }
+  }
+
+  // remove just the last block
+  m = low.match(/^(?:undo|remove|delete)\s+(?:the\s+)?last\s+block\s+(?:on|from|of)\s+(.+)$/);
+  if(m){
+    const t = assistFind(m[1]);
+    if(!t){ assistSay("No task matches “" + esc(m[1]) + "”.", "warn"); return true; }
+    if(!t.sessions.length){ assistSay("<b>" + esc(t.project) + "</b> has no blocks to remove.", "warn"); return true; }
+    const gone = t.sessions.pop();
+    save(); render();
+    assistSay("Removed <b>" + short(gone.start) + "–" + short(gone.end) + "</b> from <b>" + esc(t.project) + "</b>.");
+    return true;
+  }
+
+  // rename
+  m = q.match(/^rename\s+(.+?)\s+to\s+(.+)$/i);
+  if(m){
+    const t = assistFind(m[1]);
+    if(!t){ assistSay("No task matches “" + esc(m[1]) + "”.", "warn"); return true; }
+    const was = t.project;
+    t.project = m[2].trim(); save(); render();
+    assistSay("<b>" + esc(was) + "</b> → <b>" + esc(t.project) + "</b>.");
+    return true;
+  }
+
+  // change brand
+  m = q.match(/^(?:move|brand)\s+(.+?)\s+(?:to|under)\s+(\S+)$/i);
+  if(m){
+    const t = assistFind(m[1]);
+    if(!t){ assistSay("No task matches “" + esc(m[1]) + "”.", "warn"); return true; }
+    const want = m[2].toUpperCase();
+    const b = BRANDS.find(x=>x.v === want) || (/^default/i.test(m[2]) ? BRANDS[0] : null);
+    if(!b){ assistSay("Unknown brand “" + esc(m[2]) + "”. Try " + BRANDS.filter(x=>x.v).map(x=>x.v).join(", ") + ".", "warn"); return true; }
+    t.brand = b.v; save(); render();
+    assistSay("<b>" + esc(t.project) + "</b> is now under <b>" + esc(b.label) + "</b>.");
+    return true;
+  }
+
+  // set the entry note
+  m = q.match(/^note\s+(\S+)\s+(.+)$/i);
+  if(m){
+    const t = assistFind(m[1]);
+    if(!t){ assistSay("No task matches “" + esc(m[1]) + "”.", "warn"); return true; }
+    t.task = m[2].trim(); save(); render();
+    assistSay("Noted on <b>" + esc(t.project) + "</b>: " + esc(t.task));
+    return true;
+  }
+
+  // manual hours
+  m = low.match(/^(?:hours|set hours(?: on)?)\s+(.+?)\s+([\d.]+)$/);
+  if(m){
+    const t = assistFind(m[1]);
+    if(!t){ assistSay("No task matches “" + esc(m[1]) + "”.", "warn"); return true; }
+    if(t.sessions.length){ assistSay("<b>" + esc(t.project) + "</b> has real blocks — clear them first if you want manual hours.", "warn"); return true; }
+    t.manualHours = Math.round(parseFloat(m[2])*100)/100; save(); render();
+    assistSay("<b>" + esc(t.project) + "</b> set to <b>" + fmtH(t.manualHours) + " h</b>.");
+    return true;
+  }
+
+  // search the table
+  m = low.match(/^(?:find|search)\s+(.+)$/);
+  if(m){
+    showPage("table");
+    $("tblSearch").value = m[1];
+    $("tblSearch").dispatchEvent(new Event("input"));
+    const n = document.querySelectorAll("#flatBody tr").length;
+    assistSay("Found <b>" + n + "</b> row" + (n===1?"":"s") + " for “" + esc(m[1]) + "”.");
+    return true;
+  }
+
+  // quick settings
+  m = low.match(/^theme\s+(dark|light|custom)$/);
+  if(m){ settings.theme = m[1]; saveSettings(); assistSay("Theme → <b>" + esc(m[1]) + "</b>."); return true; }
+  m = low.match(/^design\s+(hud|glass|neo|flat|brutal|toon|cartoon)$/);
+  if(m){ settings.style = m[1]==="cartoon" ? "toon" : m[1]; saveSettings(); assistSay("Design → <b>" + esc(settings.style) + "</b>."); return true; }
+  m = low.match(/^(stars|night sky)\s+(on|off)$/);
+  if(m){ settings.stars = m[2]==="on"; saveSettings(); assistSay("Night sky " + esc(m[2]) + "."); return true; }
+  m = low.match(/^console\s+(on|off)$/);
+  if(m){ settings.asConsole = m[1]==="on"; saveSettings(); assistSay("Console mode " + esc(m[1]) + "."); return true; }
+  if(/^carry over$/.test(low)){
+    if($("carryBtn").style.display === "none"){ assistSay("Nothing unfinished to carry over.", "warn"); return true; }
+    $("carryBtn").click(); assistSay("Opened carry over."); return true;
+  }
+  if(/^pin$/.test(low)){ $("pinBtn").click(); assistSay("Toggled the pinned timer."); return true; }
+
+  return false;   // not handled here
+}
 
 /* ---------- boot ---------- */
 const sessName = sessionStorage.getItem("ledger.session");

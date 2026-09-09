@@ -23,6 +23,7 @@
     d.dataset.toon   = s.toon   || "classic";
     d.dataset.anim   = s.anim === false ? "off" : "on";
     d.dataset.stars  = s.stars ? "on" : "off";
+    d.dataset.ascon  = s.asConsole ? "on" : "off";
     d.dataset.bgpat  = s.bgpat  || "grid";
     d.dataset.hl     = s.highlight === false ? "off" : "on";
     if(s.theme === "custom" && s.palette){
@@ -467,6 +468,13 @@
         <button type="button" data-dn="comfy">COMFY</button>
         <button type="button" data-dn="compact">COMPACT</button>
         <button type="button" data-dn="hover">HOVER</button>
+      </div>
+    </div>
+    <div class="setrow">
+      <div><div class="sl">Assistant style</div><div class="sd">Chat bubbles, or a terminal-style console</div></div>
+      <div class="seg" id="asStyleSeg">
+        <button type="button" data-ac="chat">CHAT</button>
+        <button type="button" data-ac="console">CONSOLE</button>
       </div>
     </div>
     <div class="setrow">
