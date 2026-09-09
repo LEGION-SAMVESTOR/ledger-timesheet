@@ -87,6 +87,15 @@
     <button class="gearbtn" id="settingsBtn" title="Settings">⚙</button>
   </header>
 
+  <nav class="pagenav" id="pageNav">
+    <button class="navtab active" data-page="timesheet">▦ Timesheet</button>
+    <button class="navtab" data-page="dashboard">◍ Dashboard</button>
+    <button class="navtab" data-page="table">☰ Table</button>
+    <button class="navtab" data-page="sheet">▤ Day sheet</button>
+    <button class="navtab" data-page="routines">⟳ Routines</button>
+  </nav>
+
+  <section class="page" id="pageTimesheet">
   <div class="daytabs" id="dayTabs"></div>
   <button class="btn small carrybtn" id="carryBtn" style="display:none">⟲ Carry over unfinished</button>
 
@@ -136,6 +145,158 @@
       <button class="btn" id="copyBtn">⧉ Copy for Sheets</button>
     </div>
   </div>
+  </section>
+
+  <!-- ============ DASHBOARD ============ -->
+  <section class="page" id="pageDashboard" hidden>
+    <div class="rangebar">
+      <div class="seg" id="rangeSeg">
+        <button type="button" data-rg="today">TODAY</button>
+        <button type="button" data-rg="week">WEEK</button>
+        <button type="button" data-rg="month">MONTH</button>
+        <button type="button" data-rg="year">YEAR</button>
+        <button type="button" data-rg="all">ALL</button>
+      </div>
+      <span class="rangenote" id="rangeNote"></span>
+    </div>
+
+    <div class="kpigrid">
+      <div class="kpi"><div class="kl">Total logged</div><div class="kv" id="kpiTotal">0.00</div><div class="ks" id="kpiTotalSub">—</div></div>
+      <div class="kpi"><div class="kl">Daily average</div><div class="kv" id="kpiAvg">0.00</div><div class="ks" id="kpiAvgSub">—</div></div>
+      <div class="kpi"><div class="kl">Biggest brand</div><div class="kv" id="kpiTop">—</div><div class="ks" id="kpiTopSub">—</div></div>
+      <div class="kpi"><div class="kl">Client vs default</div><div class="kv" id="kpiSplit">—</div><div class="ks" id="kpiSplitSub">—</div></div>
+    </div>
+
+    <div class="dashgrid">
+      <div class="panel dashcard">
+        <div class="cardhead"><h2>Where the time went</h2><span class="cardsub" id="donutSub">by brand</span>
+          <span class="spacer"></span>
+          <div class="seg small" id="donutModeSeg">
+            <button type="button" data-dm="brand">BRAND</button>
+            <button type="button" data-dm="project">PROJECT</button>
+          </div>
+        </div>
+        <div class="donutwrap">
+          <svg class="donut" id="donutSvg" viewBox="0 0 42 42" role="img" aria-label="Time split"></svg>
+          <div class="donutmid"><span class="dm-v" id="donutTotal">0.00</span><span class="dm-l">HRS</span></div>
+          <div class="donutlegend" id="donutLegend"></div>
+        </div>
+      </div>
+
+      <div class="panel dashcard">
+        <div class="cardhead"><h2>Day by day</h2><span class="cardsub" id="barsSub">hours logged</span></div>
+        <div class="daybars" id="dayBars"></div>
+      </div>
+    </div>
+
+    <div class="panel dashcard">
+      <div class="cardhead"><h2>Projects</h2><span class="cardsub">time per project across the range</span></div>
+      <div class="ranklist" id="projRank"></div>
+    </div>
+  </section>
+
+  <!-- ============ TABLE ============ -->
+  <section class="page" id="pageTable" hidden>
+    <div class="rangebar">
+      <div class="seg" id="tblRangeSeg">
+        <button type="button" data-rg="today">TODAY</button>
+        <button type="button" data-rg="week">WEEK</button>
+        <button type="button" data-rg="month">MONTH</button>
+        <button type="button" data-rg="year">YEAR</button>
+        <button type="button" data-rg="all">ALL</button>
+      </div>
+      <input id="tblSearch" class="tblsearch" placeholder="Filter brand, project or task…" spellcheck="false">
+      <span class="spacer"></span>
+      <button class="btn small" id="tblCopy">⧉ Copy rows</button>
+    </div>
+    <div class="panel">
+      <div class="tablewrap">
+        <table class="sheet flat" id="flatTable">
+          <thead><tr>
+            <th style="width:110px">Date</th><th style="width:104px">Brand</th>
+            <th style="width:20%">Project</th><th>Task</th>
+            <th style="width:150px">Time</th><th style="width:86px">Mins</th>
+            <th style="width:86px">Hours</th><th style="width:132px">Status</th>
+          </tr></thead>
+          <tbody id="flatBody"></tbody>
+        </table>
+      </div>
+      <div class="foot">
+        <span class="total"><span id="flatTotal">0.00</span> <span class="u">HRS</span></span>
+        <span class="rangenote" id="flatCount">0 blocks</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DAY SHEET ============ -->
+  <section class="page" id="pageSheet" hidden>
+    <div class="rangebar">
+      <div class="seg" id="shtRangeSeg">
+        <button type="button" data-rg="week">WEEK</button>
+        <button type="button" data-rg="month">MONTH</button>
+        <button type="button" data-rg="year">YEAR</button>
+        <button type="button" data-rg="all">ALL</button>
+      </div>
+      <span class="rangenote" id="shtNote"></span>
+      <span class="spacer"></span>
+      <button class="btn small" id="shtCopy">⧉ Copy grid</button>
+    </div>
+    <div class="panel">
+      <div class="tablewrap">
+        <table class="sheet daysheet" id="daySheet">
+          <thead id="daySheetHead"></thead>
+          <tbody id="daySheetBody"></tbody>
+          <tfoot id="daySheetFoot"></tfoot>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ROUTINES ============ -->
+  <section class="page" id="pageRoutines" hidden>
+    <div class="rangebar">
+      <span class="rangenote">These are added to every new day automatically. Order here is the order they appear.</span>
+      <span class="spacer"></span>
+      <button class="btn small" id="routineApply">↧ Add missing to today</button>
+    </div>
+    <div class="panel">
+      <div class="addbar routinebar">
+        <div class="field"><label>Brand</label>
+          <div class="branddd" id="rtBrandDD">
+            <button type="button" class="branddd-btn" id="rtBrandBtn" aria-haspopup="listbox">
+              <span id="rtBrandCur"><span class="bpill b-none">Default Task</span></span>
+              <span class="caret">▼</span>
+            </button>
+            <div class="branddd-menu" id="rtBrandMenu" role="listbox"></div>
+          </div>
+        </div>
+        <div class="field"><label>Project</label><input id="rtProject" placeholder="Daily stand-up"></div>
+        <div class="field"><label>Note (optional)</label><input id="rtTask" placeholder="FNR, other meetings"></div>
+        <div class="field"><label>Status</label>
+          <select id="rtStatus">
+            <option selected>In Progress</option><option>Done</option><option>Pending</option>
+            <option>Preview Sent</option><option>Live</option><option>Paused</option><option>Cancelled</option>
+          </select>
+        </div>
+        <button class="btn pri" id="rtAdd" type="button">+ Add routine</button>
+      </div>
+      <div class="tablewrap">
+        <table class="sheet">
+          <thead><tr>
+            <th style="width:64px"></th><th style="width:120px">Brand</th>
+            <th style="width:26%">Project</th><th>Note</th>
+            <th style="width:146px">Status</th><th style="width:180px"></th>
+          </tr></thead>
+          <tbody id="routineBody"></tbody>
+        </table>
+      </div>
+      <div class="foot">
+        <span class="rangenote" id="routineCount">0 routines</span>
+        <span class="spacer"></span>
+        <button class="btn small" id="routineReset">Restore the original four</button>
+      </div>
+    </div>
+  </section>
 </div>
 
 <!-- timeblock modal -->

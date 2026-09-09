@@ -24,9 +24,13 @@ const DEFAULT_ENTRIES = [
 const DEFAULT_ORDER = DEFAULT_ENTRIES.map(d=>d.project);
 const DEFAULT_NAMES = DEFAULT_ORDER.map(p=>p.toLowerCase());
 // a Default-Task-brand entry named like a default counts as one, flag or not
-const isDefaultEntry = t => !!t.isDefault || (!t.brand && DEFAULT_NAMES.includes((t.project||"").trim().toLowerCase()));
+function routineNames(){
+  const rs = (typeof store!=="undefined" && store && store.routines) ? store.routines : null;
+  return rs ? rs.filter(r=>!r.brand).map(r=>(r.project||"").trim().toLowerCase()) : DEFAULT_NAMES;
+}
+const isDefaultEntry = t => !!t.isDefault || (!t.brand && routineNames().includes((t.project||"").trim().toLowerCase()));
 const defaultRank = t => {
-  const i = DEFAULT_NAMES.indexOf((t.project||"").trim().toLowerCase());
+  const i = routineNames().indexOf((t.project||"").trim().toLowerCase());
   return i<0 ? 99 : i;
 };
 const brandCls = v => (BRANDS.find(b=>b.v===v)||BRANDS[0]).cls;
@@ -755,7 +759,13 @@ function seedDefaults(day){
   if(!settings.seed) return;
   const list = store.days[day];
   if(list.length) return;
-  DEFAULT_ENTRIES.forEach(d=>list.push(newEntry({project:d.project, task:d.task, isDefault:true})));
+  const rs = (store.routines && store.routines.length)
+    ? store.routines.filter(r=>r.on)
+    : DEFAULT_ENTRIES.map(d=>({brand:"", project:d.project, task:d.task, status:"In Progress"}));
+  rs.forEach(r=>list.push(newEntry({
+    brand:r.brand||"", project:r.project, task:r.task||"",
+    status:r.status||"In Progress", isDefault:!r.brand
+  })));
 }
 // any real tracked time on a day — a single logged minute counts
 function hasLoggedTime(list){
@@ -774,8 +784,13 @@ function load(){
   store = JSON.parse(localStorage.getItem(dataKey()) || "{}");
   if(!store.days) store.days = {};
   prevDay = lastWorkedDay();
+  // history is kept now — the dashboard, table and day sheet report on it.
+  // Only empty days that were never worked get cleared, so the store stays tidy.
   const keep = new Set([todayKey(), prevDay]);
-  for(const k of Object.keys(store.days)) if(!keep.has(k)) delete store.days[k];
+  for(const k of Object.keys(store.days)){
+    if(keep.has(k)) continue;
+    if(!hasLoggedTime(store.days[k])) delete store.days[k];
+  }
   if(!store.days[todayKey()]) store.days[todayKey()] = [];
   migrate();
   closeStaleTimers();
@@ -847,6 +862,7 @@ function enter(name){
   load();
   viewDay = todayKey();
   buildBrandMenu();
+  buildRtBrandMenu();
   render();
   // the table latches row heights measured with fallback font metrics — recalc once
   // the webfonts land so the layout settles instead of drifting on the next render
@@ -1089,6 +1105,9 @@ function maybePromptCarry(){
 
 /* ---------- rendering ---------- */
 function render(){
+  if(curPage==="dashboard") renderDashboard();
+  if(curPage==="table") renderFlatTable();
+  if(curPage==="sheet") renderDaySheet();
   $("hdrDate").textContent = fmtDate(viewDay) + (viewDay===todayKey() ? " · TODAY" : "");
   renderTabs(); renderTable(); renderDatalists(); updateCarryBtn();
   $("addBar").style.opacity = viewDay===todayKey() ? 1 : .45;
@@ -1592,6 +1611,353 @@ $("prevExpandSeg").addEventListener("click", e=>{
 $("prevClose").onclick = ()=>$("prevOverlay").classList.remove("show");
 $("prevCopy").onclick = ()=>{ copyRows(); $("prevOverlay").classList.remove("show"); };
 $("prevOverlay").addEventListener("mousedown", e=>{ if(e.target===$("prevOverlay")) $("prevOverlay").classList.remove("show"); });
+
+
+/* ============================================================
+   PAGES — dashboard, table, day sheet, routines
+   ============================================================ */
+const BRAND_HEX = {"":"#8b98a6", KN:"#ffc24b", ZW:"#a7b2bd", RW:"#3ddc84", AUJ:"#ff5c69", SV:"#5ea8ff", BM:"#9d7bff"};
+const brandHex = v => BRAND_HEX[v||""] || "#8b98a6";
+const brandLabel = v => (BRANDS.find(b=>b.v===(v||""))||BRANDS[0]).label;
+
+let curPage = "timesheet";
+let ranges = {dashboard:"today", table:"today", sheet:"week"};
+
+/* ---------- range helpers ---------- */
+function shiftDays(key, n){
+  const d = new Date(key+"T12:00:00");
+  d.setDate(d.getDate()+n);
+  return d.toISOString().slice(0,10);
+}
+function rangeKeys(kind){
+  const today = todayKey();
+  const stored = Object.keys(store.days).sort();
+  if(kind==="today") return [today];
+  if(kind==="all")   return stored.length ? stored : [today];
+  const from = kind==="week" ? shiftDays(today,-6)
+             : kind==="month" ? shiftDays(today,-29)
+             : shiftDays(today,-364);
+  const keys = stored.filter(k=>k>=from && k<=today);
+  if(!keys.includes(today)) keys.push(today);
+  return keys.sort();
+}
+function rangeLabel(kind){
+  const keys = rangeKeys(kind);
+  if(kind==="today") return "Today · " + fmtDate(todayKey());
+  const first = keys[0], last = keys[keys.length-1];
+  const span = {week:"Last 7 days", month:"Last 30 days", year:"Last 12 months", all:"All time"}[kind];
+  return span + " · " + fmtDate(first) + " → " + fmtDate(last) + " · " + keys.length + " day" + (keys.length>1?"s":"");
+}
+
+/* ---------- data shaping ---------- */
+// every logged block on a day, flattened; a running timer counts up to now
+function dayBlocks(key){
+  const list = store.days[key] || [];
+  const out = [];
+  const liveEnd = hhmmss(new Date());
+  list.forEach(t=>{
+    const base = {day:key, brand:t.brand||"", project:t.project||"", status:t.status||"", def:isDefaultEntry(t)};
+    (t.sessions||[]).forEach(s=>{
+      const m = hours(s.start,s.end)*60;
+      if(m>0) out.push(Object.assign({}, base, {task:s.task||t.task||"", start:s.start, end:s.end, mins:m, live:false}));
+    });
+    if(t.live && key===todayKey()){
+      const m = hours(t.live.start, liveEnd)*60;
+      if(m>0) out.push(Object.assign({}, base, {task:t.live.task||t.task||"", start:t.live.start, end:liveEnd, mins:m, live:true}));
+    }
+    if(!(t.sessions||[]).length && !t.live && t.manualHours>0){
+      out.push(Object.assign({}, base, {task:t.task||"", start:"", end:"", mins:t.manualHours*60, live:false}));
+    }
+  });
+  return out;
+}
+function rangeBlocks(kind){ return rangeKeys(kind).flatMap(dayBlocks); }
+function sumBy(blocks, keyFn){
+  const m = new Map();
+  blocks.forEach(b=>{ const k = keyFn(b); m.set(k, (m.get(k)||0) + b.mins); });
+  return [...m.entries()].sort((a,b)=>b[1]-a[1]);
+}
+const asHrs = m => fmtH(m/60);
+
+/* ---------- routing ---------- */
+function showPage(page){
+  curPage = page;
+  ["timesheet","dashboard","table","sheet","routines"].forEach(p=>{
+    const el = $("page" + p.charAt(0).toUpperCase() + p.slice(1));
+    if(el) el.hidden = (p !== page);
+  });
+  $("pageNav").querySelectorAll(".navtab").forEach(b=>b.classList.toggle("active", b.dataset.page===page));
+  if(page==="dashboard") renderDashboard();
+  if(page==="table")     renderFlatTable();
+  if(page==="sheet")     renderDaySheet();
+  if(page==="routines")  renderRoutines();
+}
+$("pageNav").addEventListener("click", e=>{ const b=e.target.closest(".navtab"); if(b) showPage(b.dataset.page); });
+[["rangeSeg","dashboard",()=>renderDashboard()],["tblRangeSeg","table",()=>renderFlatTable()],["shtRangeSeg","sheet",()=>renderDaySheet()]]
+.forEach(function(cfg){
+  const id=cfg[0], page=cfg[1], fn=cfg[2];
+  $(id).addEventListener("click", e=>{
+    if(!e.target.dataset.rg) return;
+    ranges[page] = e.target.dataset.rg;
+    fn();
+  });
+});
+function syncRangeSeg(id, page){
+  $(id).querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.rg===ranges[page]));
+}
+
+/* ---------- dashboard ---------- */
+let donutMode = "brand";
+$("donutModeSeg").addEventListener("click", e=>{
+  if(!e.target.dataset.dm) return;
+  donutMode = e.target.dataset.dm;
+  renderDashboard();
+});
+function renderDashboard(){
+  if(!store) return;
+  const kind = ranges.dashboard;
+  syncRangeSeg("rangeSeg","dashboard");
+  $("donutModeSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.dm===donutMode));
+  $("rangeNote").textContent = rangeLabel(kind);
+
+  const keys = rangeKeys(kind);
+  const blocks = rangeBlocks(kind);
+  const total = blocks.reduce((a,b)=>a+b.mins,0);
+  const workedDays = keys.filter(k=>dayBlocks(k).length).length;
+
+  $("kpiTotal").textContent = asHrs(total);
+  $("kpiTotalSub").textContent = blocks.length + " block" + (blocks.length===1?"":"s") + " · " + workedDays + " day" + (workedDays===1?"":"s") + " worked";
+  $("kpiAvg").textContent = workedDays ? asHrs(total/workedDays) : "0.00";
+  $("kpiAvgSub").textContent = workedDays ? "per worked day" : "nothing logged yet";
+  const byBrand = sumBy(blocks, b=>b.brand);
+  $("kpiTop").textContent = byBrand.length ? brandLabel(byBrand[0][0]) : "—";
+  $("kpiTopSub").textContent = byBrand.length ? asHrs(byBrand[0][1]) + " h · " + Math.round(byBrand[0][1]/total*100) + "%" : "—";
+  const defMins = blocks.filter(b=>b.def || !b.brand).reduce((a,b)=>a+b.mins,0);
+  const cliMins = total - defMins;
+  $("kpiSplit").textContent = total ? Math.round(cliMins/total*100) + "% / " + Math.round(defMins/total*100) + "%" : "—";
+  $("kpiSplitSub").textContent = total ? asHrs(cliMins) + " client · " + asHrs(defMins) + " default" : "—";
+
+  const rows = donutMode==="brand"
+    ? byBrand.map(function(e){ return {key:e[0], name:brandLabel(e[0]), mins:e[1], col:brandHex(e[0])}; })
+    : sumBy(blocks, b=>(b.brand?brandLabel(b.brand)+" · ":"")+(b.project||"—"))
+        .map(function(e,i){ return {key:e[0], name:e[0], mins:e[1], col:GANTT_COLORS[i%GANTT_COLORS.length]}; });
+  $("donutSub").textContent = donutMode==="brand" ? "by brand" : "by project";
+  $("donutTotal").textContent = asHrs(total);
+  const svg = $("donutSvg");
+  if(!total){
+    svg.innerHTML = '<circle cx="21" cy="21" r="15.9155" stroke="var(--line)"></circle>';
+    $("donutLegend").innerHTML = '<div class="emptycard">No time logged in this range yet.</div>';
+  } else {
+    let acc = 0;
+    svg.innerHTML = '<circle cx="21" cy="21" r="15.9155" stroke="var(--panel-2)"></circle>' +
+      rows.map(function(r){
+        const pct = r.mins/total*100;
+        const seg = '<circle class="seg" cx="21" cy="21" r="15.9155" stroke="' + r.col + '"' +
+          ' stroke-dasharray="' + pct.toFixed(3) + ' ' + (100-pct).toFixed(3) + '"' +
+          ' stroke-dashoffset="' + (100 - acc + 25).toFixed(3) + '">' +
+          '<title>' + esc(r.name) + ' — ' + asHrs(r.mins) + ' h</title></circle>';
+        acc += pct;
+        return seg;
+      }).join("");
+    $("donutLegend").innerHTML = rows.slice(0,9).map(function(r){
+      return '<div class="lgrow"><span class="sw" style="background:' + r.col + '"></span>' +
+        '<span class="nm">' + esc(r.name) + '</span>' +
+        '<span class="hr">' + asHrs(r.mins) + 'h</span>' +
+        '<span class="pc">' + (r.mins/total*100).toFixed(1) + '%</span></div>';
+    }).join("");
+  }
+
+  const barKeys = kind==="today" ? [todayKey()] : keys.slice(-31);
+  const perDay = barKeys.map(k=>({k:k, blocks:dayBlocks(k)}));
+  const maxDay = Math.max.apply(null, [1].concat(perDay.map(d=>d.blocks.reduce((a,b)=>a+b.mins,0))));
+  $("barsSub").textContent = barKeys.length + " day" + (barKeys.length>1?"s":"") + " · peak " + asHrs(maxDay) + " h";
+  $("dayBars").innerHTML = perDay.length ? perDay.map(function(d){
+    const t = d.blocks.reduce((a,b)=>a+b.mins,0);
+    const inner = sumBy(d.blocks, b=>b.brand).map(function(e){
+      return '<i style="width:' + (e[1]/Math.max(t,1)*100).toFixed(2) + '%;background:' + brandHex(e[0]) + '" title="' + esc(brandLabel(e[0])) + ' ' + asHrs(e[1]) + 'h"></i>';
+    }).join("");
+    return '<div class="dbrow ' + (d.k===todayKey()?"istoday":"") + '">' +
+      '<span class="dbd">' + fmtDate(d.k) + '</span>' +
+      '<span class="dbt"><span class="dbf" style="width:' + (t/maxDay*100).toFixed(2) + '%">' + inner + '</span></span>' +
+      '<span class="dbv">' + (t?asHrs(t):"—") + '</span></div>';
+  }).join("") : '<div class="emptycard">Nothing logged yet.</div>';
+
+  const byProj = sumBy(blocks, b=>JSON.stringify([b.brand, b.project||"—"]));
+  const maxProj = byProj.length ? byProj[0][1] : 1;
+  $("projRank").innerHTML = byProj.length ? byProj.slice(0,14).map(function(e){
+    const parts = JSON.parse(e[0]), br = parts[0], pr = parts[1], m = e[1];
+    return '<div class="rkrow">' +
+      '<span class="bpill ' + brandCls(br) + '">' + esc(brandLabel(br)) + '</span>' +
+      '<span class="rkp">' + esc(pr) + '</span>' +
+      '<span class="rkbar"><i style="width:' + (m/maxProj*100).toFixed(2) + '%;background:' + brandHex(br) + '"></i></span>' +
+      '<span class="rkh">' + asHrs(m) + ' h</span>' +
+      '<span class="rkpc">' + (m/total*100).toFixed(0) + '%</span></div>';
+  }).join("") : '<div class="emptycard">No projects in this range.</div>';
+}
+
+/* ---------- flat table ---------- */
+$("tblSearch").addEventListener("input", ()=>renderFlatTable());
+function flatRows(){
+  const q = $("tblSearch").value.trim().toLowerCase();
+  let rows = rangeBlocks(ranges.table);
+  if(q) rows = rows.filter(b=>[b.brand,b.project,b.task,b.status].join(" ").toLowerCase().includes(q));
+  return rows.sort((a,b)=> a.day===b.day ? (toSec(a.start||"00:00:00")-toSec(b.start||"00:00:00")) : (a.day<b.day?1:-1));
+}
+function renderFlatTable(){
+  if(!store) return;
+  syncRangeSeg("tblRangeSeg","table");
+  const rows = flatRows();
+  const total = rows.reduce((a,b)=>a+b.mins,0);
+  $("flatBody").innerHTML = rows.length ? rows.map(function(b){
+    return '<tr>' +
+      '<td class="mono">' + fmtDate(b.day) + '</td>' +
+      '<td><span class="bpill ' + brandCls(b.brand) + '">' + esc(brandLabel(b.brand)) + '</span></td>' +
+      '<td class="projcell">' + (esc(b.project) || "—") + '</td>' +
+      '<td class="taskdesc">' + (esc(b.task) || "—") + (b.live ? ' <span class="livehint" style="display:inline">● REC</span>' : "") + '</td>' +
+      '<td class="mono">' + (b.start ? short(b.start) + "–" + short(b.end) : '<span style="opacity:.4">manual</span>') + '</td>' +
+      '<td class="num mono">' + Math.round(b.mins) + '</td>' +
+      '<td class="num mono">' + asHrs(b.mins) + '</td>' +
+      '<td><span class="status-sel ' + (STATUSES[b.status]||"") + '">' + (esc(b.status)||"—") + '</span></td>' +
+      '</tr>';
+  }).join("") : '<tr><td colspan="8"><div class="emptycard">No blocks match this range or filter.</div></td></tr>';
+  $("flatTotal").textContent = asHrs(total);
+  $("flatCount").textContent = rows.length + " block" + (rows.length===1?"":"s") + " · " + rangeLabel(ranges.table);
+}
+$("tblCopy").onclick = ()=>{
+  const rows = flatRows();
+  if(!rows.length){ toast("Nothing to copy"); return; }
+  const head = ["Date","Brand","Project","Task","Start","End","Minutes","Hours","Status"].join("\t");
+  const body = rows.map(b=>[b.day, b.brand||"Default Task", b.project, b.task, b.start, b.end, Math.round(b.mins), asHrs(b.mins), b.status].join("\t"));
+  navigator.clipboard.writeText([head].concat(body).join("\n"))
+    .then(()=>toast("Copied " + rows.length + " rows"), ()=>toast("Copy failed"));
+};
+
+/* ---------- day sheet ---------- */
+function renderDaySheet(){
+  if(!store) return;
+  syncRangeSeg("shtRangeSeg","sheet");
+  const keys = rangeKeys(ranges.sheet).filter(k=>dayBlocks(k).length || k===todayKey()).reverse();
+  $("shtNote").textContent = rangeLabel(ranges.sheet);
+  const cols = [...new Set(rangeBlocks(ranges.sheet).map(b=>b.brand))]
+    .sort((a,b)=> (a===""?-1:b===""?1:a.localeCompare(b)));
+  if(!cols.length) cols.push("");
+  $("daySheetHead").innerHTML = '<tr><th>Day</th>' + cols.map(c=>'<th>' + esc(brandLabel(c)) + '</th>').join("") + '<th>Total</th></tr>';
+  const colTotals = cols.map(()=>0);
+  let grand = 0;
+  $("daySheetBody").innerHTML = keys.length ? keys.map(function(k){
+    const blocks = dayBlocks(k);
+    const dayTotal = blocks.reduce((a,b)=>a+b.mins,0);
+    grand += dayTotal;
+    const cells = cols.map(function(c,i){
+      const m = blocks.filter(b=>b.brand===c).reduce((a,b)=>a+b.mins,0);
+      colTotals[i] += m;
+      const share = dayTotal ? m/dayTotal : 0;
+      return m ? '<td class="cellbar" style="color:' + brandHex(c) + ';--w:' + share.toFixed(3) + '">' + asHrs(m) + '</td>'
+               : '<td class="zero">·</td>';
+    }).join("");
+    return '<tr><td class="dsheet-day" data-openday="' + k + '" title="Open this day on the timesheet">' +
+      fmtDate(k) + (k===todayKey()?" · today":"") + '</td>' + cells +
+      '<td><strong>' + (dayTotal?asHrs(dayTotal):"—") + '</strong></td></tr>';
+  }).join("") : '<tr><td colspan="' + (cols.length+2) + '"><div class="emptycard">No days logged in this range.</div></td></tr>';
+  $("daySheetFoot").innerHTML = '<tr><td>Total</td>' + colTotals.map(m=>'<td>' + (m?asHrs(m):"—") + '</td>').join("") + '<td>' + (grand?asHrs(grand):"—") + '</td></tr>';
+  $("daySheetBody").querySelectorAll("[data-openday]").forEach(el=>el.onclick=()=>{
+    const k = el.dataset.openday;
+    if(!store.days[k]) return;
+    viewDay = k; showPage("timesheet"); render();
+  });
+}
+$("shtCopy").onclick = ()=>{
+  const grid = [...$("daySheet").querySelectorAll("tr")]
+    .map(tr=>[...tr.children].map(td=>td.textContent.trim().replace(/·/g,"")).join("\t")).join("\n");
+  navigator.clipboard.writeText(grid).then(()=>toast("Grid copied"), ()=>toast("Copy failed"));
+};
+
+/* ---------- routines: the repeating tasks seeded into each new day ---------- */
+function routines(){
+  if(!store.routines){
+    store.routines = DEFAULT_ENTRIES.map(d=>({brand:"", project:d.project, task:d.task, status:"In Progress", on:true}));
+    save();
+  }
+  return store.routines;
+}
+let rtBrand = "";
+function buildRtBrandMenu(){
+  $("rtBrandMenu").innerHTML = BRANDS.map(b=>
+    '<button type="button" class="branddd-item" data-b="' + b.v + '"><span class="bpill ' + b.cls + '">' + b.label + '</span></button>').join("");
+  $("rtBrandMenu").querySelectorAll(".branddd-item").forEach(el=>el.onclick=()=>{
+    rtBrand = el.dataset.b;
+    const b = BRANDS.find(x=>x.v===rtBrand)||BRANDS[0];
+    $("rtBrandCur").innerHTML = '<span class="bpill ' + b.cls + '">' + b.label + '</span>';
+    $("rtBrandDD").classList.remove("open");
+  });
+}
+$("rtBrandBtn").onclick = e=>{ e.stopPropagation(); $("rtBrandDD").classList.toggle("open"); };
+document.addEventListener("click", e=>{ if(!$("rtBrandDD").contains(e.target)) $("rtBrandDD").classList.remove("open"); });
+function renderRoutines(){
+  if(!store) return;
+  const list = routines();
+  $("routineBody").innerHTML = list.length ? list.map(function(r,i){
+    return '<tr class="' + (r.on?"":"rtoff") + '">' +
+      '<td><div class="rtorder">' +
+        '<button class="icon-btn" data-rup="' + i + '" ' + (i===0?"disabled":"") + ' title="Move up">↑</button>' +
+        '<button class="icon-btn" data-rdn="' + i + '" ' + (i===list.length-1?"disabled":"") + ' title="Move down">↓</button>' +
+      '</div></td>' +
+      '<td><span class="bpill ' + brandCls(r.brand) + '">' + esc(brandLabel(r.brand)) + '</span></td>' +
+      '<td class="projcell">' + esc(r.project) + '</td>' +
+      '<td class="taskdesc">' + (esc(r.task) || '<span style="opacity:.4">—</span>') + '</td>' +
+      '<td><span class="status-sel ' + (STATUSES[r.status]||"") + '">' + esc(r.status) + '</span></td>' +
+      '<td><div class="rowbtns">' +
+        '<button class="icon-btn" data-rtoggle="' + i + '">' + (r.on?"on":"off") + '</button>' +
+        '<button class="icon-btn" data-rtedit="' + i + '" title="Rename">✎</button>' +
+        '<button class="icon-btn" data-rtdel="' + i + '" title="Delete">✕</button>' +
+      '</div></td></tr>';
+  }).join("") : '<tr><td colspan="6"><div class="emptycard">No routines — add one above and it will appear every day.</div></td></tr>';
+  $("routineCount").textContent = list.filter(r=>r.on).length + " active of " + list.length;
+  const body = $("routineBody");
+  const swap = (a,b)=>{ const l=routines(); const t=l[a]; l[a]=l[b]; l[b]=t; save(); renderRoutines(); };
+  body.querySelectorAll("[data-rup]").forEach(el=>el.onclick=()=>swap(+el.dataset.rup, +el.dataset.rup-1));
+  body.querySelectorAll("[data-rdn]").forEach(el=>el.onclick=()=>swap(+el.dataset.rdn, +el.dataset.rdn+1));
+  body.querySelectorAll("[data-rtoggle]").forEach(el=>el.onclick=()=>{
+    const l=routines(); l[+el.dataset.rtoggle].on = !l[+el.dataset.rtoggle].on; save(); renderRoutines();
+  });
+  body.querySelectorAll("[data-rtdel]").forEach(el=>el.onclick=()=>{
+    const l=routines(), i=+el.dataset.rtdel;
+    if(confirm('Remove "' + l[i].project + '" from every day?')){ l.splice(i,1); save(); renderRoutines(); }
+  });
+  body.querySelectorAll("[data-rtedit]").forEach(el=>el.onclick=()=>{
+    const l=routines(), r=l[+el.dataset.rtedit];
+    const p = prompt("Project name", r.project); if(p===null) return;
+    const n = prompt("Note (optional)", r.task); if(n===null) return;
+    r.project = p.trim() || r.project; r.task = n.trim();
+    save(); renderRoutines();
+  });
+}
+$("rtAdd").onclick = ()=>{
+  const p = $("rtProject").value.trim();
+  if(!p){ $("rtProject").focus(); return; }
+  routines().push({brand:rtBrand, project:p, task:$("rtTask").value.trim(), status:$("rtStatus").value, on:true});
+  $("rtProject").value=""; $("rtTask").value="";
+  save(); renderRoutines();
+  toast("Routine added — it will appear each new day");
+};
+$("routineReset").onclick = ()=>{
+  if(!confirm("Restore Meeting, Discussions, Upskilling and Research?")) return;
+  store.routines = DEFAULT_ENTRIES.map(d=>({brand:"", project:d.project, task:d.task, status:"In Progress", on:true}));
+  save(); renderRoutines();
+};
+// add any routine missing from today, without disturbing what is already there
+$("routineApply").onclick = ()=>{
+  const list = tasks();
+  const have = new Set(list.map(t=>(t.brand||"") + "::" + (t.project||"").trim().toLowerCase()));
+  let added = 0;
+  routines().filter(r=>r.on).forEach(r=>{
+    if(have.has((r.brand||"") + "::" + r.project.trim().toLowerCase())) return;
+    list.push(newEntry({brand:r.brand, project:r.project, task:r.task, status:r.status, isDefault:!r.brand}));
+    added++;
+  });
+  save(); render();
+  toast(added ? added + " routine" + (added>1?"s":"") + " added to today" : "Today already has them all");
+};
 
 /* ---------- boot ---------- */
 const sessName = sessionStorage.getItem("ledger.session");

@@ -1415,3 +1415,109 @@ body.booting .login-wrap,body.booting .app{visibility:hidden}
 }
 [data-anim="off"] .starfield .planet{animation:none}
 @media (prefers-reduced-motion: reduce){ .starfield .planet{animation:none} }
+
+/* ============================================================
+   PAGES — nav, dashboard, table, day sheet, routines
+   ============================================================ */
+.pagenav{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0 6px}
+.navtab{
+  border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 18px;
+  color:var(--ink-soft);font-size:12px;letter-spacing:.06em;transition:.15s;
+  font-family:"Chakra Petch",sans-serif;font-weight:600;
+}
+.navtab:hover{border-color:var(--line-strong);color:var(--ink)}
+.navtab.active{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-dim);box-shadow:0 0 16px -8px var(--cyan)}
+.page[hidden]{display:none}
+
+.rangebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:18px 0 14px}
+.rangebar .spacer{flex:1}
+.rangenote{font-size:11px;color:var(--ink-soft);letter-spacing:.06em}
+.seg.small button{padding:5px 11px;font-size:10.5px}
+.tblsearch{
+  padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);
+  color:var(--ink);font-size:12px;min-width:230px;flex:0 1 320px;
+}
+
+/* KPI strip */
+.kpigrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px}
+.kpi{
+  background:var(--panel);border-radius:var(--radius);padding:16px 18px;
+  box-shadow:0 0 0 1px var(--line);position:relative;overflow:hidden;
+}
+.kpi::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--cyan);opacity:.45}
+.kpi .kl{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);font-family:"Chakra Petch",sans-serif;font-weight:600}
+.kpi .kv{font-family:"Chakra Petch",sans-serif;font-size:30px;font-weight:700;color:var(--ink-strong);line-height:1.15;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi .ks{font-size:11px;color:var(--ink-soft);margin-top:2px}
+
+.dashgrid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
+@media(max-width:1080px){.dashgrid{grid-template-columns:1fr}}
+.dashcard{padding:18px}
+.cardhead{display:flex;align-items:baseline;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.cardhead h2{font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-strong)}
+.cardhead .cardsub{font-size:11px;color:var(--ink-soft)}
+.cardhead .spacer{flex:1}
+
+/* donut */
+.donutwrap{display:grid;grid-template-columns:190px minmax(0,1fr);gap:20px;align-items:center;position:relative}
+@media(max-width:560px){.donutwrap{grid-template-columns:1fr;justify-items:center}}
+.donut{width:190px;height:190px;transform:rotate(-90deg)}
+.donut circle{fill:none;stroke-width:5.4;transition:stroke-width .15s}
+.donut circle.seg{cursor:default}
+.donut circle.seg:hover{stroke-width:6.6}
+.donutmid{
+  position:absolute;left:95px;top:50%;transform:translate(-50%,-50%);
+  display:flex;flex-direction:column;align-items:center;pointer-events:none;
+}
+@media(max-width:560px){.donutmid{left:50%;top:95px}}
+.donutmid .dm-v{font-family:"Chakra Petch",sans-serif;font-size:28px;font-weight:700;color:var(--ink-strong);font-variant-numeric:tabular-nums;line-height:1}
+.donutmid .dm-l{font-size:9.5px;letter-spacing:.22em;color:var(--cyan);font-family:"Chakra Petch",sans-serif}
+.donutlegend{display:flex;flex-direction:column;gap:8px;min-width:0}
+.lgrow{display:flex;align-items:center;gap:10px;font-size:12px;min-width:0}
+.lgrow .sw{width:11px;height:11px;border-radius:3px;flex:0 0 11px}
+.lgrow .nm{color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.lgrow .hr{color:var(--ink-strong);font-variant-numeric:tabular-nums;font-weight:600}
+.lgrow .pc{color:var(--ink-soft);font-variant-numeric:tabular-nums;min-width:44px;text-align:right}
+.emptycard{padding:38px 10px;text-align:center;color:var(--ink-soft);font-size:12px}
+
+/* day bars */
+.daybars{display:flex;flex-direction:column;gap:9px}
+.dbrow{display:grid;grid-template-columns:96px minmax(0,1fr) 62px;gap:12px;align-items:center;font-size:11.5px}
+.dbrow .dbd{color:var(--ink-soft);white-space:nowrap}
+.dbrow .dbt{height:14px;background:var(--panel-2);border-radius:6px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.dbrow .dbf{height:100%;border-radius:6px;display:flex}
+.dbrow .dbf i{display:block;height:100%}
+.dbrow .dbv{text-align:right;color:var(--ink-strong);font-variant-numeric:tabular-nums;font-weight:600}
+.dbrow.istoday .dbd{color:var(--cyan);font-weight:600}
+
+/* ranked project list */
+.ranklist{display:flex;flex-direction:column;gap:10px}
+.rkrow{display:grid;grid-template-columns:112px minmax(0,1.1fr) minmax(0,2fr) 76px 54px;gap:12px;align-items:center;font-size:12px}
+@media(max-width:820px){.rkrow{grid-template-columns:100px minmax(0,1fr) 70px;}.rkrow .rkbar{display:none}}
+.rkrow .rkp{color:var(--ink-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rkrow .rkbar{height:10px;background:var(--panel-2);border-radius:6px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.rkrow .rkbar i{display:block;height:100%;border-radius:6px}
+.rkrow .rkh{text-align:right;color:var(--ink-strong);font-variant-numeric:tabular-nums;font-weight:600}
+.rkrow .rkpc{text-align:right;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+
+/* flat table + day sheet */
+.sheet.flat td,.sheet.daysheet td{height:auto;padding:10px 14px}
+.sheet.flat .mono,.sheet.daysheet .num{font-variant-numeric:tabular-nums}
+.sheet.daysheet th{text-align:right}
+.sheet.daysheet th:first-child{text-align:left}
+.sheet.daysheet td{text-align:right}
+.sheet.daysheet td:first-child{text-align:left;color:var(--ink-strong)}
+.sheet.daysheet tfoot td{border-top:1px solid var(--line-strong);color:var(--ink-strong);font-weight:600;border-bottom:none}
+.sheet.daysheet .zero{color:var(--ink-soft);opacity:.35}
+.sheet.daysheet .cellbar{position:relative}
+.sheet.daysheet .cellbar::after{
+  content:"";position:absolute;left:6px;right:6px;bottom:3px;height:2px;border-radius:2px;
+  background:currentColor;opacity:.22;transform:scaleX(var(--w,0));transform-origin:right;
+}
+.dsheet-day{cursor:pointer}
+.dsheet-day:hover{color:var(--cyan)}
+
+/* routines */
+.routinebar{grid-template-columns:170px 1fr 1fr 150px auto}
+.rtorder{display:flex;gap:4px}
+.rtorder button{padding:2px 7px;font-size:11px}
+.rtoff td{opacity:.45}
