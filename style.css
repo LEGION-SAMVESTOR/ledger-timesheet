@@ -1581,10 +1581,15 @@ body.booting .login-wrap,body.booting .app{visibility:hidden}
   flex:1;min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:9px;
   background:var(--panel-2);color:var(--ink);font-size:12px;
 }
-[data-style="neo"] .asbtn{box-shadow:5px 5px 12px var(--neo-lo), -5px -5px 12px var(--neo-hi)}
-[data-style="brutal"] .asbtn{border:2px solid var(--ink-strong);border-radius:4px;box-shadow:3px 3px 0 var(--ink-strong)}
+[data-style="neo"] .asbtn{background:var(--bg);color:var(--cyan);box-shadow:6px 6px 14px var(--neo-lo), -6px -6px 14px var(--neo-hi)}
+[data-style="neo"] .asbtn::before{background:var(--cyan)}
+[data-style="brutal"] .asbtn{border:2.5px solid var(--ink-strong);border-radius:4px;box-shadow:4px 4px 0 var(--ink-strong)}
+[data-style="brutal"] .asbtn:hover{border-radius:4px;transform:translate(1px,1px);box-shadow:2px 2px 0 var(--ink-strong)}
+[data-style="brutal"] .asbtn.on{border-radius:4px}
 [data-style="brutal"] .aspanel{border:2px solid var(--ink-strong);border-radius:4px;box-shadow:none}
-[data-style="toon"] .asbtn{border:3px solid var(--toon-out);box-shadow:4px 5px 0 var(--toon-shadow)}
+[data-style="toon"] .asbtn{border:3px solid var(--toon-out);border-radius:50%;box-shadow:4px 5px 0 var(--toon-shadow)}
+[data-style="toon"] .asbtn:hover{border-radius:50%;transform:translate(-2px,-3px) rotate(-8deg);box-shadow:6px 8px 0 var(--toon-shadow)}
+[data-style="toon"] .asbtn.on{border-radius:50%}
 [data-style="toon"] .aspanel{border:3px solid var(--toon-out);box-shadow:7px 8px 0 var(--toon-shadow)}
 [data-style="glass"] .aspanel{background:color-mix(in srgb, var(--panel-solid) 92%, transparent)}
 @media(max-width:640px){ .assist{right:14px;bottom:14px} }
@@ -1650,12 +1655,15 @@ html::-webkit-scrollbar-thumb:hover{background-color:var(--cyan);box-shadow:0 0 
   background:repeating-linear-gradient(0deg, transparent 0 3px, color-mix(in srgb, var(--cyan) 4%, transparent) 3px 4px);
 }
 [data-ascon="on"] .asmsg{
-  background:none !important;padding:1px 0;border-radius:0;max-width:100%;
-  color:color-mix(in srgb, var(--cyan) 78%, var(--ink));
+  background:none !important;padding:1px 0 1px 12px;border-radius:0;max-width:100%;
+  color:var(--reply);border-left:2px solid color-mix(in srgb, var(--reply) 40%, transparent);
 }
-[data-ascon="on"] .asmsg.you{align-self:stretch;color:var(--ink-strong);font-weight:500}
+[data-ascon="on"] .asmsg b{color:color-mix(in srgb, var(--reply) 55%, #ffffff)}
+[data-ascon="on"] .asmsg.you{
+  align-self:stretch;color:var(--ink-strong);font-weight:600;border-left:2px solid var(--cyan);
+}
 [data-ascon="on"] .asmsg.you::before{content:"› ";color:var(--cyan);font-weight:700}
-[data-ascon="on"] .asmsg.ok::before{content:"· ";color:color-mix(in srgb, var(--cyan) 60%, transparent)}
+[data-ascon="on"] .asmsg.ok::before{content:"";}
 [data-ascon="on"] .asmsg.warn{color:var(--amber)}
 [data-ascon="on"] .asmsg.warn::before{content:"! ";font-weight:700}
 [data-ascon="on"] .asform{border-top:1px solid color-mix(in srgb, var(--cyan) 35%, transparent);position:relative;align-items:center}
@@ -1668,5 +1676,56 @@ html::-webkit-scrollbar-thumb:hover{background-color:var(--cyan);box-shadow:0 0 
   border:none;border-radius:0;padding-left:18px;color:var(--cyan);caret-color:var(--cyan);
 }
 [data-ascon="on"] .asform input:focus{outline:none}
-[data-ascon="on"] .asbtn{border-radius:8px;font-family:ui-monospace,monospace}
+[data-ascon="on"] .asbtn{border-radius:10px}
+[data-ascon="on"] .asbtn::before{
+  width:20px;height:20px;background:var(--accent-ink);
+  clip-path:polygon(6% 18%,20% 18%,42% 50%,20% 82%,6% 82%,28% 50%);
+}
+[data-ascon="on"] .asbtn.on::before{
+  clip-path:polygon(44% 0,56% 0,56% 44%,100% 44%,100% 56%,56% 56%,56% 100%,44% 100%,44% 56%,0 56%,0 44%,44% 44%);
+}
 .ashint{color:var(--ink-soft);font-size:10.5px;letter-spacing:.04em}
+
+/* assistant replies get their own hue so they never blur into your own typing */
+:root{--reply:#5ff0c4}
+[data-theme="light"]{--reply:#0b8f6a}
+[data-style="toon"]{--reply:#1f7a52}
+[data-style="toon"][data-toon="ben10"]{--reply:#8fd8ff}
+[data-accent="emerald"]{--reply:#7fc6ff}
+[data-style="toon"][data-toon="shinchan"]{--reply:#2f6f8f}
+/* chat mode: a tinted edge on replies, your own messages stay accent-filled */
+.asmsg.ok{border-left:2px solid color-mix(in srgb, var(--reply) 55%, transparent);color:color-mix(in srgb, var(--reply) 88%, var(--ink))}
+.asmsg.ok b{color:color-mix(in srgb, var(--reply) 45%, var(--ink-strong))}
+.asmsg.warn{border-left:2px solid var(--amber)}
+
+/* ---------- assistant button ---------- */
+.asbtn{
+  position:relative;width:56px;height:56px;border-radius:18px;border:none;
+  background:
+    radial-gradient(circle at 32% 28%, color-mix(in srgb,#fff 55%, transparent), transparent 46%),
+    linear-gradient(145deg, color-mix(in srgb, var(--cyan) 92%, #fff), var(--cyan) 55%, color-mix(in srgb, var(--cyan) 70%, #000));
+  color:var(--accent-ink);font-size:0;
+  box-shadow:0 12px 30px -10px var(--cyan), inset 0 1px 0 rgba(255,255,255,.45);
+  transition:transform .22s cubic-bezier(.34,1.56,.5,1), border-radius .22s, box-shadow .2s;
+}
+.asbtn::before{                       /* the mark */
+  content:"";position:absolute;inset:0;margin:auto;width:22px;height:22px;
+  background:var(--accent-ink);
+  clip-path:polygon(50% 0%,60% 34%,96% 44%,66% 62%,74% 98%,50% 76%,26% 98%,34% 62%,4% 44%,40% 34%);
+  transition:transform .28s cubic-bezier(.34,1.56,.5,1), clip-path .2s, width .2s, height .2s;
+}
+.asbtn::after{                        /* breathing halo */
+  content:"";position:absolute;inset:-6px;border-radius:24px;pointer-events:none;
+  border:1px solid color-mix(in srgb, var(--cyan) 55%, transparent);
+  opacity:0;animation:asHalo 3.4s ease-in-out infinite;
+}
+@keyframes asHalo{0%,100%{opacity:0;transform:scale(.92)}50%{opacity:.75;transform:scale(1.06)}}
+.asbtn:hover{transform:translateY(-3px) scale(1.04);border-radius:20px;box-shadow:0 16px 34px -8px var(--cyan)}
+.asbtn.on{transform:rotate(90deg);border-radius:50%}
+.asbtn.on::before{
+  width:18px;height:18px;
+  clip-path:polygon(44% 0,56% 0,56% 44%,100% 44%,100% 56%,56% 56%,56% 100%,44% 100%,44% 56%,0 56%,0 44%,44% 44%);
+}
+.asbtn.on::after{animation:none;opacity:0}
+[data-anim="off"] .asbtn::after{animation:none}
+@media (prefers-reduced-motion: reduce){ .asbtn::after{animation:none} }
