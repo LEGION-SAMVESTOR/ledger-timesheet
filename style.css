@@ -325,6 +325,46 @@ header.top .spacer{flex:1}
 .b-BM{background:rgba(157,123,255,.16);color:#9d7bff;border-color:rgba(157,123,255,.42)}
 [data-theme="light"] .b-BM{background:rgba(106,63,216,.12);color:#6a3fd8;border-color:rgba(106,63,216,.4)}
 .b-none{background:var(--panel-2);color:var(--ink-soft);border-color:var(--line)}
+/* a client or status the user added or recoloured: the pill is mixed from its own hex,
+   so it still reads correctly against either theme instead of being baked in */
+.bpill.b-cust,.status-sel.st-cust{
+  background:color-mix(in srgb, var(--pc,#8b98a6) 17%, transparent);
+  color:var(--pc,#8b98a6);
+  border-color:color-mix(in srgb, var(--pc,#8b98a6) 38%, transparent);
+}
+/* light ground — and the cartoon modes, which are pale whatever the theme says —
+   need the hex pushed darker or an 11px bold pill loses its contrast */
+[data-theme="light"] .bpill.b-cust,[data-theme="light"] .status-sel.st-cust,
+[data-style="toon"] .bpill.b-cust,[data-style="toon"] .status-sel.st-cust{
+  background:color-mix(in srgb, var(--pc,#8b98a6) 16%, #fff);
+  color:color-mix(in srgb, var(--pc,#8b98a6) 84%, #000);
+  border-color:color-mix(in srgb, var(--pc,#8b98a6) 48%, transparent);
+}
+/* Ben 10 runs dark again, so put it back */
+[data-style="toon"][data-toon="ben10"] .bpill.b-cust,
+[data-style="toon"][data-toon="ben10"] .status-sel.st-cust{
+  background:color-mix(in srgb, var(--pc,#8b98a6) 17%, transparent);
+  color:var(--pc,#8b98a6);
+  border-color:color-mix(in srgb, var(--pc,#8b98a6) 38%, transparent);
+}
+
+/* ---------- lists page ---------- */
+.listbar{align-items:flex-end}
+.colfield{flex:0 0 auto;min-width:0}
+.listbar .field.colfield{flex:0 0 auto}
+/* .field input is width:100% — beat it so the picker stays a swatch, not a bar */
+.swatch,.field .swatch{
+  width:46px;min-width:46px;flex:0 0 46px;height:34px;padding:2px;border-radius:9px;cursor:pointer;
+  border:1px solid var(--line);background:var(--panel-2);
+}
+.sheet .swatch{width:40px;min-width:40px;height:28px}
+.swatch::-webkit-color-swatch-wrapper{padding:0}
+.swatch::-webkit-color-swatch{border:none;border-radius:6px}
+.swatch::-moz-color-swatch{border:none;border-radius:6px}
+.swatch:hover{border-color:var(--cyan)}
+#pageLists .panel+.panel{margin-top:16px}
+#pageLists .sheet .status-sel,#pageLists .sheet .bpill{white-space:nowrap}
+.dim{opacity:.4}
 
 /* ---------- table ---------- */
 /* fixed layout: column widths come from the header, not the content, so adding a

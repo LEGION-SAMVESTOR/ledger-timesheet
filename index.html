@@ -95,6 +95,7 @@
     <button class="navtab daytab" data-page="table">☰ Table</button>
     <button class="navtab daytab" data-page="sheet">▤ Day sheet</button>
     <button class="navtab daytab" data-page="routines">⟳ Routines</button>
+    <button class="navtab daytab" data-page="lists">⚑ Lists</button>
   </nav>
 
   <section class="page" id="pageTimesheet">
@@ -251,6 +252,56 @@
           <tfoot id="daySheetFoot"></tfoot>
         </table>
       </div>
+    </div>
+  </section>
+
+  <!-- ============ LISTS ============ -->
+  <section class="page" id="pageLists" hidden>
+    <div class="rangebar">
+      <span class="rangenote">Clients and statuses feed every dropdown in Ledger. They are shared by everyone who logs in on this browser.</span>
+      <span class="spacer"></span>
+      <button class="btn small" id="listsReset">Restore the originals</button>
+    </div>
+
+    <div class="panel">
+      <div class="cardhead"><h2>Clients</h2><span class="cardsub" id="brandCount">—</span></div>
+      <div class="addbar listbar">
+        <div class="field"><label>Code</label><input id="nbCode" placeholder="ABC" maxlength="14" spellcheck="false"></div>
+        <div class="field"><label>Shown as</label><input id="nbLabel" placeholder="same as the code"></div>
+        <div class="field colfield"><label>Colour</label><input type="color" class="swatch" id="nbHex" value="#5ea8ff"></div>
+        <button class="btn pri" id="nbAdd" type="button">+ Add client</button>
+      </div>
+      <div class="tablewrap">
+        <table class="sheet">
+          <thead><tr>
+            <th style="width:64px"></th><th style="width:140px">Pill</th>
+            <th style="width:96px">Code</th><th>Shown as</th>
+            <th style="width:78px">Colour</th><th style="width:70px">Used</th><th style="width:104px"></th>
+          </tr></thead>
+          <tbody id="brandListBody"></tbody>
+        </table>
+      </div>
+      <div class="foot"><span class="rangenote">“Used” counts entries in your own history. Removing a client only takes it out of the dropdowns — nothing already logged is lost.</span></div>
+    </div>
+
+    <div class="panel">
+      <div class="cardhead"><h2>Statuses</h2><span class="cardsub" id="statusCount">—</span></div>
+      <div class="addbar listbar">
+        <div class="field"><label>Name</label><input id="nsName" placeholder="Awaiting Feedback"></div>
+        <div class="field colfield"><label>Colour</label><input type="color" class="swatch" id="nsHex" value="#8fe39b"></div>
+        <button class="btn pri" id="nsAdd" type="button">+ Add status</button>
+      </div>
+      <div class="tablewrap">
+        <table class="sheet">
+          <thead><tr>
+            <th style="width:64px"></th><th style="width:200px">Chip</th>
+            <th>Name</th><th style="width:78px">Colour</th>
+            <th style="width:70px">Used</th><th style="width:104px"></th>
+          </tr></thead>
+          <tbody id="statusListBody"></tbody>
+        </table>
+      </div>
+      <div class="foot"><span class="rangenote">Order here is the order of the status dropdown on every task.</span></div>
     </div>
   </section>
 

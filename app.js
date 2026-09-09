@@ -2,19 +2,51 @@
 const $ = id => document.getElementById(id);
 const LS_USERS = "ledger.users";
 const LS_SET = "ledger.settings";
-const STATUSES = {
-  "Done":"st-done","Pending":"st-pending","Preview Sent":"st-preview","Live":"st-live",
-  "Paused":"st-paused","Cancelled":"st-cancel","In Progress":"st-progress"
-};
-const BRANDS = [
-  {v:"",    label:"Default Task", cls:"b-none"},
-  {v:"KN",  label:"KN",  cls:"b-KN"},
-  {v:"ZW",  label:"ZW",  cls:"b-ZW"},
-  {v:"RW",  label:"RW",  cls:"b-RW"},
-  {v:"AUJ", label:"AUJ", cls:"b-AUJ"},
-  {v:"SV",  label:"SV",  cls:"b-SV"},
-  {v:"BM",  label:"BM",  cls:"b-BM"},
+/* ---------- catalogues: clients and statuses, editable from the Lists page ----------
+   These live outside the per-user store, so adding a client once makes it available
+   to everyone who logs in on this browser. A built-in keeps its hand-tuned CSS class;
+   anything added or recoloured here drives its pill from a hex instead. */
+const LS_LISTS = "ledger.lists";
+const BUILTIN_STATUSES = [
+  {name:"Done",         cls:"st-done",     hex:"#3ddc84"},
+  {name:"Pending",      cls:"st-pending",  hex:"#ffc24b"},
+  {name:"Preview Sent", cls:"st-preview",  hex:"#8fe39b"},
+  {name:"Live",         cls:"st-live",     hex:"#6fe3ee"},
+  {name:"Paused",       cls:"st-paused",   hex:"#ff5c69"},
+  {name:"Cancelled",    cls:"st-cancel",   hex:"#ff7a84"},
+  {name:"In Progress",  cls:"st-progress", hex:"#5ea8ff"}
 ];
+const BUILTIN_BRANDS = [
+  {v:"",    label:"Default Task", cls:"b-none", hex:"#8b98a6", fixed:true},
+  {v:"KN",  label:"KN",  cls:"b-KN",  hex:"#ffc24b"},
+  {v:"ZW",  label:"ZW",  cls:"b-ZW",  hex:"#a7b2bd"},
+  {v:"RW",  label:"RW",  cls:"b-RW",  hex:"#3ddc84"},
+  {v:"AUJ", label:"AUJ", cls:"b-AUJ", hex:"#ff5c69"},
+  {v:"SV",  label:"SV",  cls:"b-SV",  hex:"#5ea8ff"},
+  {v:"BM",  label:"BM",  cls:"b-BM",  hex:"#9d7bff"}
+];
+// mutated in place, never reassigned, so every reference taken at load stays live
+const BRANDS = [];
+const STATUS_LIST = [];
+const STATUSES = {};   // name -> css class; the shape the older call sites expect
+const deepCopy = o => JSON.parse(JSON.stringify(o));
+function loadLists(){
+  let saved = null;
+  try{ saved = JSON.parse(localStorage.getItem(LS_LISTS) || "null"); }catch(e){}
+  const bs = (saved && Array.isArray(saved.brands)   && saved.brands.length)   ? saved.brands   : deepCopy(BUILTIN_BRANDS);
+  const ss = (saved && Array.isArray(saved.statuses) && saved.statuses.length) ? saved.statuses : deepCopy(BUILTIN_STATUSES);
+  BRANDS.length = 0; bs.forEach(x=>BRANDS.push(x));
+  STATUS_LIST.length = 0; ss.forEach(x=>STATUS_LIST.push(x));
+  // "no brand" is what Default Task means everywhere, so it has to exist and lead
+  if(!BRANDS.some(x=>x.v==="")) BRANDS.unshift(deepCopy(BUILTIN_BRANDS[0]));
+  Object.keys(STATUSES).forEach(k=>delete STATUSES[k]);
+  STATUS_LIST.forEach(x=>{ STATUSES[x.name] = x.cls || "st-cust"; });
+}
+function saveLists(){
+  localStorage.setItem(LS_LISTS, JSON.stringify({brands:BRANDS, statuses:STATUS_LIST}));
+  loadLists();
+}
+loadLists();
 const DEFAULT_ENTRIES = [
   {project:"Meeting",     task:""},
   {project:"Discussions", task:""},
@@ -33,7 +65,15 @@ const defaultRank = t => {
   const i = routineNames().indexOf((t.project||"").trim().toLowerCase());
   return i<0 ? 99 : i;
 };
-const brandCls = v => (BRANDS.find(b=>b.v===v)||BRANDS[0]).cls;
+const brandRec = v => BRANDS.find(b=>b.v===(v||"")) || null;
+// a built-in renders from its class; a custom or recoloured one from --pc, so both stay theme-aware
+const brandCls = v => { const b = brandRec(v); return b && b.cls ? b.cls : "b-cust"; };
+const brandStyle = v => { const b = brandRec(v); return (b && b.cls) ? "" : ' style="--pc:' + ((b && b.hex) || "#8b98a6") + '"'; };
+const statusRec = n => STATUS_LIST.find(s=>s.name===n) || null;
+const statusCls = n => { const s = statusRec(n); return s ? (s.cls || "st-cust") : ""; };
+const statusStyle = n => { const s = statusRec(n); return (s && !s.cls) ? ' style="--pc:' + (s.hex || "#8b98a6") + '"' : ""; };
+const statusVars = n => { const s = statusRec(n); return (s && !s.cls) ? "--pc:" + (s.hex || "#8b98a6") : ""; };
+const statusNames = () => STATUS_LIST.map(s=>s.name);
 
 /* ---------- helpers ---------- */
 const todayKey = () => new Date().toISOString().slice(0,10);
@@ -953,6 +993,8 @@ function enter(name){
   viewDay = todayKey();
   buildBrandMenu();
   buildRtBrandMenu();
+  fillStatusSelect($("fStatus"),  "In Progress");
+  fillStatusSelect($("rtStatus"), "In Progress");
   render();
   // the table latches row heights measured with fallback font metrics — recalc once
   // the webfonts land so the layout settles instead of drifting on the next render
@@ -967,11 +1009,11 @@ function enter(name){
 /* ---------- brand dropdown ---------- */
 function buildBrandMenu(){
   $("brandMenu").innerHTML = BRANDS.map(b=>
-    `<button type="button" class="branddd-item" data-b="${b.v}" role="option"><span class="bpill ${b.cls}">${b.label}</span></button>`).join("");
+    `<button type="button" class="branddd-item" data-b="${b.v}" role="option"><span class="bpill ${brandCls(b.v)}"${brandStyle(b.v)}>${esc(b.label)}</span></button>`).join("");
   $("brandMenu").querySelectorAll(".branddd-item").forEach(el=>el.onclick=()=>{
     curBrand = el.dataset.b;
     const b = BRANDS.find(x=>x.v===curBrand)||BRANDS[0];
-    $("brandCur").innerHTML = `<span class="bpill ${b.cls}">${b.label}</span>`;
+    $("brandCur").innerHTML = `<span class="bpill ${brandCls(b.v)}"${brandStyle(b.v)}>${esc(b.label)}</span>`;
     $("brandDD").classList.remove("open");
   });
 }
@@ -1116,7 +1158,7 @@ let editIdx = null;
 function openEdit(i){
   const t = tasks()[i];
   editIdx = i;
-  $("eBrand").innerHTML = BRANDS.map(b=>`<option value="${b.v}" ${b.v===t.brand?"selected":""}>${b.label}</option>`).join("");
+  $("eBrand").innerHTML = BRANDS.map(b=>`<option value="${b.v}" ${b.v===t.brand?"selected":""}>${esc(b.label)}</option>`).join("");
   $("eProject").value = t.project||"";
   $("eTask").value = t.task||"";
   $("eHours").value = t.manualHours!=null ? String(t.manualHours) : "";
@@ -1160,12 +1202,12 @@ function openCarry(){
   $("carryList").innerHTML = cands.map((t,k)=>
     `<label class="carryitem">
       <input type="checkbox" data-carry="${k}" checked>
-      <span class="bpill ${brandCls(t.brand)}">${t.brand?esc(t.brand):"Default Task"}</span>
+      <span class="bpill ${brandCls(t.brand)}"${brandStyle(t.brand)}>${esc(brandLabel(t.brand))}</span>
       <span class="ci-main">
         <span class="ci-proj">${esc(t.project||"—")}</span>
         ${t.task?`<span class="ci-sub">${esc(t.task)}</span>`:""}
       </span>
-      <span class="status-sel ${STATUSES[t.status]||""}" style="pointer-events:none">${esc(t.status)}</span>
+      <span class="status-sel ${statusCls(t.status)}" style="pointer-events:none;${statusVars(t.status)}">${esc(t.status)}</span>
     </label>`).join("");
   $("carryList")._cands = cands;
   $("carryOverlay").classList.add("show");
@@ -1240,12 +1282,12 @@ function renderTable(){
       const h = taskHours(t);
       const share = dayTotal>0 ? Math.min(100, Math.round(h/dayTotal*100)) : 0;
       return `<tr data-i="${i}" class="${t.live?"running":""}">
-        <td><span class="bpill ${brandCls(t.brand)}">${t.brand?esc(t.brand):"Default Task"}</span></td>
+        <td><span class="bpill ${brandCls(t.brand)}"${brandStyle(t.brand)}>${esc(brandLabel(t.brand))}</span></td>
         <td><div class="projcell">${esc(t.project)}</div>${t.task?`<div class="taskdesc">${esc(t.task)}</div>`:""}</td>
         <td class="tbcell">${t.live?`<span class="livehint">● REC</span>`:""}<div class="sesswrap">${chips||`<span style="color:var(--ink-soft);opacity:.5">—</span>`}</div></td>
         <td class="num ${noBlocks&&editable?"editable":""}" ${noBlocks&&editable?`data-eh="${i}" title="Click to set hours"`:""} data-hours="${i}"><strong>${fmtH(h)}</strong><div class="hbar"><span style="width:${share}%"></span></div></td>
-        <td><select class="status-sel ${STATUSES[t.status]||""}" data-st="${i}" ${editable?"":"disabled"}>
-          ${Object.keys(STATUSES).map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}
+        <td><select class="status-sel ${statusCls(t.status)}" ${statusStyle(t.status)} data-st="${i}" ${editable?"":"disabled"}>
+          ${statusNames().concat(statusNames().includes(t.status)?[]:[t.status]).map(s=>`<option ${s===t.status?"selected":""}>${esc(s)}</option>`).join("")}
         </select></td>
         <td><div class="rowbtns">
           ${editable ? (t.live
@@ -1307,7 +1349,7 @@ function renderBrandStrip(list, total){
   $("brandStrip").innerHTML = keys.map(k=>{
     const b = BRANDS.find(x=>x.v===k)||BRANDS[0];
     const pct = total>0 ? Math.round(agg[k]/total*100) : 0;
-    return `<span class="bsitem"><span class="bpill ${b.cls}">${b.label}</span><span class="v">${fmtH(agg[k])}h</span>· ${pct}%</span>`;
+    return `<span class="bsitem"><span class="bpill ${brandCls(b.v)}"${brandStyle(b.v)}>${esc(b.label)}</span><span class="v">${fmtH(agg[k])}h</span>· ${pct}%</span>`;
   }).join("");
 }
 function renderTarget(total){
@@ -1493,7 +1535,7 @@ function buildRows(expandDefaults){
     const total = exportHours(t, liveEnd);
     if(total<=0) continue; // skip zero-hour entries
     const blocks = exportBlocks(t, liveEnd);
-    const brandName = t.brand || "Default Task";
+    const brandName = brandLabel(t.brand);
     const collapses = !t.brand || isDefaultEntry(t) || !blocks.length;
     if(collapses && !(expandDefaults && blocks.length)){
       // final value only — one row, task column lists every block label
@@ -1647,7 +1689,7 @@ function openAssign(aSec,bSec){
   $("aEntry").innerHTML = `<option value="" selected disabled>— choose a task —</option>` +
     orderedIndices(list).map(i=>{
       const t=list[i];
-      return `<option value="${i}">${esc(t.brand||"Default Task")} · ${esc(t.project||"—")}</option>`;
+      return `<option value="${i}">${esc(brandLabel(t.brand))} · ${esc(t.project||"—")}</option>`;
     }).join("");
   $("aEntry").value = "";
   $("aTask").value = "";
@@ -1706,9 +1748,9 @@ $("prevOverlay").addEventListener("mousedown", e=>{ if(e.target===$("prevOverlay
 /* ============================================================
    PAGES — dashboard, table, day sheet, routines
    ============================================================ */
-const BRAND_HEX = {"":"#8b98a6", KN:"#ffc24b", ZW:"#a7b2bd", RW:"#3ddc84", AUJ:"#ff5c69", SV:"#5ea8ff", BM:"#9d7bff"};
-const brandHex = v => BRAND_HEX[v||""] || "#8b98a6";
-const brandLabel = v => (BRANDS.find(b=>b.v===(v||""))||BRANDS[0]).label;
+const brandHex = v => { const b = brandRec(v); return (b && b.hex) || "#8b98a6"; };
+// a removed client still shows its own code rather than silently reading as Default Task
+const brandLabel = v => { const b = brandRec(v); return b ? b.label : (v || "Default Task"); };
 
 let curPage = "timesheet";
 let ranges = {dashboard:"today", table:"today", sheet:"week"};
@@ -1772,7 +1814,7 @@ const asHrs = m => fmtH(m/60);
 /* ---------- routing ---------- */
 function showPage(page){
   curPage = page;
-  ["timesheet","dashboard","table","sheet","routines"].forEach(p=>{
+  ["timesheet","dashboard","table","sheet","routines","lists"].forEach(p=>{
     const el = $("page" + p.charAt(0).toUpperCase() + p.slice(1));
     if(el) el.hidden = (p !== page);
   });
@@ -1781,6 +1823,7 @@ function showPage(page){
   if(page==="table")     renderFlatTable();
   if(page==="sheet")     renderDaySheet();
   if(page==="routines")  renderRoutines();
+  if(page==="lists")     renderLists();
 }
 $("pageNav").addEventListener("click", e=>{ const b=e.target.closest(".navtab"); if(b) showPage(b.dataset.page); });
 [["rangeSeg","dashboard",()=>renderDashboard()],["tblRangeSeg","table",()=>renderFlatTable()],["shtRangeSeg","sheet",()=>renderDaySheet()]]
@@ -1877,7 +1920,7 @@ function renderDashboard(){
   $("projRank").innerHTML = byProj.length ? byProj.slice(0,14).map(function(e){
     const parts = JSON.parse(e[0]), br = parts[0], pr = parts[1], m = e[1];
     return '<div class="rkrow">' +
-      '<span class="bpill ' + brandCls(br) + '">' + esc(brandLabel(br)) + '</span>' +
+      '<span class="bpill ' + brandCls(br) + '"' + brandStyle(br) + '>' + esc(brandLabel(br)) + '</span>' +
       '<span class="rkp">' + esc(pr) + '</span>' +
       '<span class="rkbar"><i style="width:' + (m/maxProj*100).toFixed(2) + '%;background:' + brandHex(br) + '"></i></span>' +
       '<span class="rkh">' + asHrs(m) + ' h</span>' +
@@ -1901,13 +1944,13 @@ function renderFlatTable(){
   $("flatBody").innerHTML = rows.length ? rows.map(function(b){
     return '<tr>' +
       '<td class="mono">' + fmtDate(b.day) + '</td>' +
-      '<td><span class="bpill ' + brandCls(b.brand) + '">' + esc(brandLabel(b.brand)) + '</span></td>' +
+      '<td><span class="bpill ' + brandCls(b.brand) + '"' + brandStyle(b.brand) + '>' + esc(brandLabel(b.brand)) + '</span></td>' +
       '<td class="projcell">' + (esc(b.project) || "—") + '</td>' +
       '<td class="taskdesc">' + (esc(b.task) || "—") + (b.live ? ' <span class="livehint" style="display:inline">● REC</span>' : "") + '</td>' +
       '<td class="mono">' + (b.start ? short(b.start) + "–" + short(b.end) : '<span style="opacity:.4">manual</span>') + '</td>' +
       '<td class="num mono">' + Math.round(b.mins) + '</td>' +
       '<td class="num mono">' + asHrs(b.mins) + '</td>' +
-      '<td><span class="status-sel ' + (STATUSES[b.status]||"") + '">' + (esc(b.status)||"—") + '</span></td>' +
+      '<td><span class="status-sel ' + statusCls(b.status) + '"' + statusStyle(b.status) + '>' + (esc(b.status)||"—") + '</span></td>' +
       '</tr>';
   }).join("") : '<tr><td colspan="8"><div class="emptycard">No blocks match this range or filter.</div></td></tr>';
   $("flatTotal").textContent = asHrs(total);
@@ -1917,7 +1960,7 @@ $("tblCopy").onclick = ()=>{
   const rows = flatRows();
   if(!rows.length){ toast("Nothing to copy"); return; }
   const head = ["Date","Brand","Project","Task","Start","End","Minutes","Hours","Status"].join("\t");
-  const body = rows.map(b=>[b.day, b.brand||"Default Task", b.project, b.task, b.start, b.end, Math.round(b.mins), asHrs(b.mins), b.status].join("\t"));
+  const body = rows.map(b=>[b.day, brandLabel(b.brand), b.project, b.task, b.start, b.end, Math.round(b.mins), asHrs(b.mins), b.status].join("\t"));
   navigator.clipboard.writeText([head].concat(body).join("\n"))
     .then(()=>toast("Copied " + rows.length + " rows"), ()=>toast("Copy failed"));
 };
@@ -1973,11 +2016,11 @@ function routines(){
 let rtBrand = "";
 function buildRtBrandMenu(){
   $("rtBrandMenu").innerHTML = BRANDS.map(b=>
-    '<button type="button" class="branddd-item" data-b="' + b.v + '"><span class="bpill ' + b.cls + '">' + b.label + '</span></button>').join("");
+    '<button type="button" class="branddd-item" data-b="' + b.v + '"><span class="bpill ' + brandCls(b.v) + '"' + brandStyle(b.v) + '>' + esc(b.label) + '</span></button>').join("");
   $("rtBrandMenu").querySelectorAll(".branddd-item").forEach(el=>el.onclick=()=>{
     rtBrand = el.dataset.b;
     const b = BRANDS.find(x=>x.v===rtBrand)||BRANDS[0];
-    $("rtBrandCur").innerHTML = '<span class="bpill ' + b.cls + '">' + b.label + '</span>';
+    $("rtBrandCur").innerHTML = '<span class="bpill ' + brandCls(b.v) + '"' + brandStyle(b.v) + '>' + esc(b.label) + '</span>';
     $("rtBrandDD").classList.remove("open");
   });
 }
@@ -1992,10 +2035,10 @@ function renderRoutines(){
         '<button class="icon-btn" data-rup="' + i + '" ' + (i===0?"disabled":"") + ' title="Move up">↑</button>' +
         '<button class="icon-btn" data-rdn="' + i + '" ' + (i===list.length-1?"disabled":"") + ' title="Move down">↓</button>' +
       '</div></td>' +
-      '<td><span class="bpill ' + brandCls(r.brand) + '">' + esc(brandLabel(r.brand)) + '</span></td>' +
+      '<td><span class="bpill ' + brandCls(r.brand) + '"' + brandStyle(r.brand) + '>' + esc(brandLabel(r.brand)) + '</span></td>' +
       '<td class="projcell">' + esc(r.project) + '</td>' +
       '<td class="taskdesc">' + (esc(r.task) || '<span style="opacity:.4">—</span>') + '</td>' +
-      '<td><span class="status-sel ' + (STATUSES[r.status]||"") + '">' + esc(r.status) + '</span></td>' +
+      '<td><span class="status-sel ' + statusCls(r.status) + '"' + statusStyle(r.status) + '>' + esc(r.status) + '</span></td>' +
       '<td><div class="rowbtns">' +
         '<button class="icon-btn" data-rtoggle="' + i + '">' + (r.on?"on":"off") + '</button>' +
         '<button class="icon-btn" data-rtedit="' + i + '" title="Rename">✎</button>' +
@@ -2050,6 +2093,209 @@ $("routineApply").onclick = ()=>{
 };
 
 
+
+/* ---------- lists: the client and status catalogues everything else reads from ---------- */
+// how many entries in this login's data lean on each code / status name
+function listUsage(){
+  const b = {}, s = {};
+  if(!store) return {b:b, s:s};
+  Object.keys(store.days || {}).forEach(function(k){
+    (store.days[k] || []).forEach(function(t){
+      b[t.brand||""] = (b[t.brand||""]||0) + 1;
+      if(t.status) s[t.status] = (s[t.status]||0) + 1;
+    });
+  });
+  (store.routines || []).forEach(function(r){
+    b[r.brand||""] = (b[r.brand||""]||0) + 1;
+    if(r.status) s[r.status] = (s[r.status]||0) + 1;
+  });
+  return {b:b, s:s};
+}
+// rewrite a code or a status name everywhere this user has used it
+function migrateBrand(from, to){
+  if(!store) return 0;
+  let n = 0;
+  Object.keys(store.days || {}).forEach(function(k){
+    (store.days[k] || []).forEach(function(t){ if((t.brand||"") === from){ t.brand = to; n++; } });
+  });
+  (store.routines || []).forEach(function(r){ if((r.brand||"") === from){ r.brand = to; n++; } });
+  if(n) save();
+  return n;
+}
+function migrateStatus(from, to){
+  if(!store) return 0;
+  let n = 0;
+  Object.keys(store.days || {}).forEach(function(k){
+    (store.days[k] || []).forEach(function(t){ if(t.status === from){ t.status = to; n++; } });
+  });
+  (store.routines || []).forEach(function(r){ if(r.status === from){ r.status = to; n++; } });
+  if(n) save();
+  return n;
+}
+function fillStatusSelect(el, prefer){
+  if(!el) return;
+  const names = statusNames();
+  if(!names.length) return;
+  let cur = el.value || prefer;
+  if(names.indexOf(cur) < 0) cur = names.indexOf(prefer) >= 0 ? prefer : names[0];
+  el.innerHTML = names.map(function(s){ return '<option ' + (s===cur?"selected":"") + '>' + esc(s) + '</option>'; }).join("");
+  el.value = cur;
+}
+// every dropdown that quotes the catalogues is rebuilt from it after any edit
+function refreshCatalogUI(){
+  if(!brandRec(curBrand)) curBrand = "";
+  if(!brandRec(rtBrand))  rtBrand  = "";
+  buildBrandMenu(); buildRtBrandMenu();
+  const cb = brandRec(curBrand) || BRANDS[0];
+  $("brandCur").innerHTML = '<span class="bpill ' + brandCls(cb.v) + '"' + brandStyle(cb.v) + '>' + esc(cb.label) + '</span>';
+  const rb = brandRec(rtBrand) || BRANDS[0];
+  $("rtBrandCur").innerHTML = '<span class="bpill ' + brandCls(rb.v) + '"' + brandStyle(rb.v) + '>' + esc(rb.label) + '</span>';
+  fillStatusSelect($("fStatus"),  "In Progress");
+  fillStatusSelect($("rtStatus"), "In Progress");
+  if(store) render();
+  if(curPage === "lists") renderLists();
+  if(curPage === "routines") renderRoutines();
+}
+
+function renderLists(){
+  const use = listUsage();
+
+  $("brandListBody").innerHTML = BRANDS.map(function(b,i){
+    const n = use.b[b.v] || 0;
+    return '<tr>' +
+      '<td><div class="rtorder">' +
+        '<button class="icon-btn" data-bup="' + i + '" ' + (i<=1?"disabled":"") + ' title="Move up">↑</button>' +
+        '<button class="icon-btn" data-bdn="' + i + '" ' + (i===0||i===BRANDS.length-1?"disabled":"") + ' title="Move down">↓</button>' +
+      '</div></td>' +
+      '<td><span class="bpill ' + brandCls(b.v) + '"' + brandStyle(b.v) + '>' + esc(b.label) + '</span></td>' +
+      '<td class="mono">' + (b.v ? esc(b.v) : '<span class="dim">no code</span>') + '</td>' +
+      '<td class="projcell">' + esc(b.label) + '</td>' +
+      '<td><input type="color" class="swatch" data-bcol="' + i + '" value="' + (b.hex || "#8b98a6") + '" title="Pill colour"></td>' +
+      '<td class="num mono">' + (n || '<span class="dim">0</span>') + '</td>' +
+      '<td><div class="rowbtns">' +
+        '<button class="icon-btn" data-bedit="' + i + '" title="Rename">✎</button>' +
+        (b.fixed
+          ? '<button class="icon-btn" disabled title="Default Task is what an entry with no client means — it stays">✕</button>'
+          : '<button class="icon-btn" data-bdel="' + i + '" title="Remove from the dropdowns">✕</button>') +
+      '</div></td></tr>';
+  }).join("");
+  $("brandCount").textContent = BRANDS.length + " in the dropdown";
+
+  $("statusListBody").innerHTML = STATUS_LIST.map(function(s,i){
+    const n = use.s[s.name] || 0;
+    return '<tr>' +
+      '<td><div class="rtorder">' +
+        '<button class="icon-btn" data-sup="' + i + '" ' + (i===0?"disabled":"") + ' title="Move up">↑</button>' +
+        '<button class="icon-btn" data-sdn="' + i + '" ' + (i===STATUS_LIST.length-1?"disabled":"") + ' title="Move down">↓</button>' +
+      '</div></td>' +
+      '<td><span class="status-sel ' + statusCls(s.name) + '"' + statusStyle(s.name) + '>' + esc(s.name) + '</span></td>' +
+      '<td class="projcell">' + esc(s.name) + '</td>' +
+      '<td><input type="color" class="swatch" data-scol="' + i + '" value="' + (s.hex || "#8b98a6") + '" title="Chip colour"></td>' +
+      '<td class="num mono">' + (n || '<span class="dim">0</span>') + '</td>' +
+      '<td><div class="rowbtns">' +
+        '<button class="icon-btn" data-sedit="' + i + '" title="Rename">✎</button>' +
+        '<button class="icon-btn" data-sdel="' + i + '" title="Remove" ' + (STATUS_LIST.length<2?"disabled":"") + '>✕</button>' +
+      '</div></td></tr>';
+  }).join("");
+  $("statusCount").textContent = STATUS_LIST.length + " in the dropdown";
+
+  const root = $("pageLists");
+  const swapB = function(a,c){ const t=BRANDS[a]; BRANDS[a]=BRANDS[c]; BRANDS[c]=t; saveLists(); refreshCatalogUI(); };
+  const swapS = function(a,c){ const t=STATUS_LIST[a]; STATUS_LIST[a]=STATUS_LIST[c]; STATUS_LIST[c]=t; saveLists(); refreshCatalogUI(); };
+  root.querySelectorAll("[data-bup]").forEach(el=>el.onclick=()=>swapB(+el.dataset.bup, +el.dataset.bup-1));
+  root.querySelectorAll("[data-bdn]").forEach(el=>el.onclick=()=>swapB(+el.dataset.bdn, +el.dataset.bdn+1));
+  root.querySelectorAll("[data-sup]").forEach(el=>el.onclick=()=>swapS(+el.dataset.sup, +el.dataset.sup-1));
+  root.querySelectorAll("[data-sdn]").forEach(el=>el.onclick=()=>swapS(+el.dataset.sdn, +el.dataset.sdn+1));
+
+  // picking a colour drops the built-in class, so the hex is what drives the pill from then on
+  root.querySelectorAll("[data-bcol]").forEach(el=>el.onchange=()=>{
+    const b = BRANDS[+el.dataset.bcol];
+    b.hex = el.value; delete b.cls;
+    saveLists(); refreshCatalogUI();
+  });
+  root.querySelectorAll("[data-scol]").forEach(el=>el.onchange=()=>{
+    const s = STATUS_LIST[+el.dataset.scol];
+    s.hex = el.value; delete s.cls;
+    saveLists(); refreshCatalogUI();
+  });
+
+  root.querySelectorAll("[data-bedit]").forEach(el=>el.onclick=()=>{
+    const i = +el.dataset.bedit, b = BRANDS[i];
+    const label = prompt("Shown as", b.label);
+    if(label === null) return;
+    if(!b.fixed){
+      const code = prompt("Code stored on each entry — changing it rewrites your own data", b.v);
+      if(code === null) return;
+      const want = code.trim().toUpperCase();
+      if(!want){ toast("A client needs a code"); return; }
+      if(want !== b.v){
+        if(BRANDS.some((x,k)=>k!==i && x.v===want)){ toast(want + " is already in the list"); return; }
+        const moved = migrateBrand(b.v, want);
+        b.v = want;
+        if(moved) toast(moved + " of your entries moved to " + want);
+      }
+    }
+    b.label = label.trim() || b.v || b.label;
+    saveLists(); refreshCatalogUI();
+  });
+  root.querySelectorAll("[data-sedit]").forEach(el=>el.onclick=()=>{
+    const i = +el.dataset.sedit, s = STATUS_LIST[i];
+    const name = prompt("Status name — renaming rewrites it on your own entries", s.name);
+    if(name === null) return;
+    const want = name.trim();
+    if(!want) return;
+    if(want !== s.name){
+      if(STATUS_LIST.some((x,k)=>k!==i && x.name===want)){ toast(want + " is already in the list"); return; }
+      const moved = migrateStatus(s.name, want);
+      s.name = want;
+      if(moved) toast(moved + " of your entries renamed");
+    }
+    saveLists(); refreshCatalogUI();
+  });
+
+  root.querySelectorAll("[data-bdel]").forEach(el=>el.onclick=()=>{
+    const i = +el.dataset.bdel, b = BRANDS[i], n = use.b[b.v] || 0;
+    const msg = n
+      ? 'Remove "' + b.label + '" from the dropdowns?\n\nIt is on ' + n + ' of your entries. Those keep the code and stay in your reports — it just stops being offered on new ones.'
+      : 'Remove "' + b.label + '" from the dropdowns?';
+    if(!confirm(msg)) return;
+    BRANDS.splice(i,1); saveLists(); refreshCatalogUI();
+  });
+  root.querySelectorAll("[data-sdel]").forEach(el=>el.onclick=()=>{
+    const i = +el.dataset.sdel, s = STATUS_LIST[i], n = use.s[s.name] || 0;
+    const msg = n
+      ? 'Remove "' + s.name + '"?\n\nIt is on ' + n + ' of your entries. Those keep it until you change them by hand.'
+      : 'Remove "' + s.name + '"?';
+    if(!confirm(msg)) return;
+    STATUS_LIST.splice(i,1); saveLists(); refreshCatalogUI();
+  });
+}
+
+$("nbAdd").onclick = ()=>{
+  const code = $("nbCode").value.trim().toUpperCase();
+  if(!code){ $("nbCode").focus(); return; }
+  if(brandRec(code)){ toast(code + " is already in the list"); return; }
+  BRANDS.push({v:code, label:$("nbLabel").value.trim() || code, hex:$("nbHex").value});
+  $("nbCode").value = ""; $("nbLabel").value = "";
+  saveLists(); refreshCatalogUI();
+  toast(code + " added — it is in every brand dropdown now");
+};
+$("nsAdd").onclick = ()=>{
+  const name = $("nsName").value.trim();
+  if(!name){ $("nsName").focus(); return; }
+  if(statusRec(name)){ toast(name + " is already in the list"); return; }
+  STATUS_LIST.push({name:name, hex:$("nsHex").value});
+  $("nsName").value = "";
+  saveLists(); refreshCatalogUI();
+  toast(name + " added");
+};
+$("listsReset").onclick = ()=>{
+  if(!confirm("Put the clients and statuses back to how Ledger shipped?\n\nYour logged time is untouched — only the dropdowns change.")) return;
+  BRANDS.length = 0; BUILTIN_BRANDS.forEach(b=>BRANDS.push(deepCopy(b)));
+  STATUS_LIST.length = 0; BUILTIN_STATUSES.forEach(s=>STATUS_LIST.push(deepCopy(s)));
+  saveLists(); refreshCatalogUI();
+};
+
 /* ============================================================
    ASSISTANT — a local command bar. Pattern matching only: no
    network, no library, everything runs against the same store.
@@ -2096,8 +2342,11 @@ function assistFind(term){
       || list.find(x=>((x.brand||"") + " " + (x.project||"")).toLowerCase().includes(t))
       || null;
 }
-const ASSIST_STATUS = {done:"Done", pending:"Pending", "preview sent":"Preview Sent", live:"Live",
-                       paused:"Paused", cancelled:"Cancelled", "in progress":"In Progress"};
+// built from the live list so a status added on the Lists page is instantly sayable
+function assistStatus(word){
+  const w = word.trim().toLowerCase();
+  return statusNames().find(s=>s.toLowerCase() === w) || null;
+}
 
 function assistRun(raw){
   const q = (raw || "").trim();
@@ -2114,9 +2363,10 @@ function assistRun(raw){
     return;
   }
   // pages
-  m = low.match(/^(?:go to |open |show )?(dashboard|table|day ?sheet|sheet|routines|timesheet)$/);
+  m = low.match(/^(?:go to |open |show )?(dashboard|table|day ?sheet|sheet|routines|timesheet|lists|clients)$/);
   if(m){
-    const page = m[1].replace(/\s/g,"") === "daysheet" ? "sheet" : m[1];
+    let page = m[1].replace(/\s/g,"") === "daysheet" ? "sheet" : m[1];
+    if(page === "clients") page = "lists";
     showPage(page);
     assistSay("Opened <b>" + esc(page) + "</b>.");
     return;
@@ -2199,11 +2449,11 @@ function assistRun(raw){
   }
 
   // mark X done
-  m = low.match(/^(?:mark|set)\s+(.+?)\s+(?:as\s+)?(done|pending|preview sent|live|paused|cancelled|in progress)$/);
-  if(m){
+  m = low.match(/^(?:mark|set)\s+(.+?)\s+(?:as\s+)?(.+)$/);
+  if(m && assistStatus(m[2])){
     const t = assistFind(m[1]);
     if(!t){ assistSay("No task matches “" + esc(m[1]) + "”.", "warn"); return; }
-    t.status = ASSIST_STATUS[m[2]];
+    t.status = assistStatus(m[2]);
     if(t.status === "Done" && t.live){
       t.sessions.push({task:t.live.task, start:t.live.start, end:hhmmss(new Date())});
       t.live = null;
