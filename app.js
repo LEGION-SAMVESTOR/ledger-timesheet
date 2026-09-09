@@ -66,11 +66,11 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 const PALETTE_DEFAULT = {bg:"#07090d", surface:"#101620", text:"#dbe7f0", muted:"#6d7f8f", accent:"#38e1ff"};
 const SET_DEFAULTS = {theme:"dark", style:"hud", toon:"classic", toonImages:{}, imgfx:"front", bgfx:"aurora", accent:"cyan", font:"mono", fsize:"m", density:"comfy", highlight:true, anim:true, stars:false, askStart:true, seed:true,
   bgpat:"grid", bgdim:55,
-  starCfg:{density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true, moon:true, constellations:true}, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
+  starCfg:{density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true, moon:true, constellations:false}, remind:true, remindMins:30, target:8, palette:PALETTE_DEFAULT};
 let settings = Object.assign({}, SET_DEFAULTS, JSON.parse(localStorage.getItem(LS_SET) || "{}"));
 settings.palette = Object.assign({}, PALETTE_DEFAULT, settings.palette||{});
 settings.toonImages = settings.toonImages || {};
-settings.starCfg = Object.assign({density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true, moon:true, constellations:true}, settings.starCfg||{});
+settings.starCfg = Object.assign({density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true, moon:true, constellations:false}, settings.starCfg||{});
 
 /* ---------- background sprites: uploaded images (+ optional URLs) ----------
    Uploads live in their own localStorage key so settings stay small and fast
@@ -471,14 +471,15 @@ function moonSvg(p){
         <stop offset="100%" stop-color="rgba(226,238,255,0)"/>
       </radialGradient>
     </defs>
-    <circle r="1.06" fill="url(#moonGlow)"/>
-    <circle r="1" fill="rgba(150,170,200,.16)"/>
+    <circle r="1.09" fill="url(#moonGlow)"/>
+    <circle r="1" fill="#2b3242"/>
     <g transform="scale(${waning ? -1 : 1},1)">
       <path d="${path}" fill="#eef3ff"/>
     </g>
-    <circle cx="-.34" cy="-.28" r=".17" fill="rgba(120,140,175,.20)"/>
-    <circle cx=".22" cy=".34" r=".22" fill="rgba(120,140,175,.16)"/>
-    <circle cx=".38" cy="-.42" r=".11" fill="rgba(120,140,175,.18)"/>
+    <g class="craters">
+      <circle cx="-.34" cy="-.28" r=".17"/><circle cx=".22" cy=".34" r=".22"/>
+      <circle cx=".38" cy="-.42" r=".11"/><circle cx="-.12" cy=".52" r=".09"/>
+    </g>
   </svg>`;
 }
 // a few small patterns, drawn as joined dots and breathed in and out
@@ -661,7 +662,7 @@ $("starCfgBtn").onclick = ()=>{ syncStarInputs(); $("starOverlay").classList.add
 $("starCfgClose").onclick = ()=>$("starOverlay").classList.remove("show");
 $("starOverlay").addEventListener("mousedown", e=>{ if(e.target===$("starOverlay")) $("starOverlay").classList.remove("show"); });
 $("starReset").onclick = ()=>{
-  settings.starCfg = {density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true, moon:true, constellations:true};
+  settings.starCfg = {density:60, twinkle:100, drift:100, bright:100, shoot:2, shootFreq:13, sizes:true, planets:false, cluster:true, click:true, moon:true, constellations:false};
   saveSettings();
 };
 
@@ -2044,6 +2045,210 @@ $("routineApply").onclick = ()=>{
   save(); render();
   toast(added ? added + " routine" + (added>1?"s":"") + " added to today" : "Today already has them all");
 };
+
+
+/* ============================================================
+   ASSISTANT — a local command bar. Pattern matching only: no
+   network, no library, everything runs against the same store.
+   ============================================================ */
+const ASSIST_HELP = [
+  ["add RW Homepage",            "create a task (brand optional)"],
+  ["start homepage as hero fix", "start its timer with a block label"],
+  ["stop",                       "stop whatever is running"],
+  ["log 45m on homepage",        "add a block of that length, ending now"],
+  ["log 10:00-11:30 meeting",    "add a block for an exact range"],
+  ["mark homepage done",         "set a status"],
+  ["remind me to send update at 17:30", "add a reminder"],
+  ["today",                      "read back the day so far"],
+  ["dashboard / table / sheet / routines / timesheet", "jump to a page"]
+];
+function assistSay(text, kind){
+  const log = $("asLog");
+  const row = document.createElement("div");
+  row.className = "asmsg " + (kind || "ok");
+  row.innerHTML = text;
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+}
+function assistEcho(text){
+  const log = $("asLog");
+  const row = document.createElement("div");
+  row.className = "asmsg you";
+  row.textContent = text;
+  log.appendChild(row);
+}
+// find an entry on today by loose project/brand match
+function assistFind(term){
+  const t = term.trim().toLowerCase();
+  if(!t) return null;
+  const list = tasks();
+  return list.find(x=>(x.project||"").toLowerCase() === t)
+      || list.find(x=>(x.project||"").toLowerCase().includes(t))
+      || list.find(x=>((x.brand||"") + " " + (x.project||"")).toLowerCase().includes(t))
+      || null;
+}
+const ASSIST_STATUS = {done:"Done", pending:"Pending", "preview sent":"Preview Sent", live:"Live",
+                       paused:"Paused", cancelled:"Cancelled", "in progress":"In Progress"};
+
+function assistRun(raw){
+  const q = (raw || "").trim();
+  if(!q) return;
+  assistEcho(q);
+  const low = q.toLowerCase();
+  let m;
+
+  if(/^(help|\?|what can you do)/.test(low)){
+    assistSay("Try any of these:<br>" + ASSIST_HELP.map(h=>`<b>${esc(h[0])}</b> — ${esc(h[1])}`).join("<br>"));
+    return;
+  }
+  // pages
+  m = low.match(/^(?:go to |open |show )?(dashboard|table|day ?sheet|sheet|routines|timesheet)$/);
+  if(m){
+    const page = m[1].replace(/\s/g,"") === "daysheet" ? "sheet" : m[1];
+    showPage(page);
+    assistSay("Opened <b>" + esc(page) + "</b>.");
+    return;
+  }
+  if(/^(gaps|show gaps)$/.test(low)){ $("gapsBtn").click(); assistSay("Opened the gaps audit."); return; }
+  if(/^(preview|export preview)$/.test(low)){ $("previewBtn").click(); assistSay("Opened the export preview."); return; }
+  if(/^(copy|copy for sheets)$/.test(low)){ $("copyBtn").click(); assistSay("Copied the day for Sheets."); return; }
+
+  // read back the day
+  if(/^(today|total|how much|status|summary)$/.test(low)){
+    const blocks = dayBlocks(todayKey());
+    const mins = blocks.reduce((a,b)=>a+b.mins,0);
+    const running = tasks().filter(t=>t.live);
+    const top = sumBy(blocks, b=>b.brand)[0];
+    assistSay(`<b>${asHrs(mins)} h</b> logged today across ${blocks.length} block${blocks.length===1?"":"s"}.` +
+      (top ? ` Most on <b>${esc(brandLabel(top[0]))}</b> (${asHrs(top[1])} h).` : "") +
+      (running.length ? ` <b>${esc(running[0].project||"A task")}</b> is running now.` : " Nothing is running."));
+    return;
+  }
+
+  // stop
+  if(/^stop\b/.test(low)){
+    const term = low.replace(/^stop\s*/,"").trim();
+    const running = tasks().filter(t=>t.live);
+    if(!running.length){ assistSay("No timer is running.", "warn"); return; }
+    const targets = term ? running.filter(t=>((t.brand||"")+" "+(t.project||"")).toLowerCase().includes(term)) : running;
+    if(!targets.length){ assistSay("Nothing running matches “" + esc(term) + "”.", "warn"); return; }
+    targets.forEach(t=>{
+      t.sessions.push({task:t.live.task, start:t.live.start, end:hhmmss(new Date())});
+      t.live = null;
+    });
+    save(); render();
+    assistSay("Stopped <b>" + targets.map(t=>esc(t.project||"task")).join(", ") + "</b>.");
+    return;
+  }
+
+  // start [thing] as [label]
+  m = low.match(/^(?:start|resume|begin)\s+(.+?)(?:\s+as\s+(.+))?$/);
+  if(m){
+    const t = assistFind(m[1]);
+    if(!t){ assistSay("No task on today matches “" + esc(m[1]) + "”. Add it first?", "warn"); return; }
+    if(t.live){ assistSay("<b>" + esc(t.project) + "</b> is already running.", "warn"); return; }
+    const stopped = [];
+    tasks().forEach(o=>{
+      if(o !== t && o.live){
+        o.sessions.push({task:o.live.task, start:o.live.start, end:hhmmss(new Date())});
+        stopped.push(o.project || "task"); o.live = null;
+      }
+    });
+    const rm = settings.remind ? settings.remindMins : 0;
+    t.live = {task:(m[2]||t.task||"").trim(), start:hhmmss(new Date()), remind:rm>0?rm:null, nextRemind:rm>0?rm:null};
+    save(); render();
+    assistSay("Started <b>" + esc(t.project) + "</b>" + (m[2] ? " — " + esc(m[2]) : "") + "." +
+      (stopped.length ? " Stopped " + esc(stopped.join(", ")) + "." : ""));
+    return;
+  }
+
+  // log 45m on X   |   log 1h30 on X
+  m = low.match(/^log\s+(?:(\d+)\s*h(?:ours?|rs?)?)?\s*(?:(\d+)\s*m(?:in(?:ute)?s?)?)?\s+(?:on\s+|to\s+|for\s+)?(.+?)(?:\s+as\s+(.+))?$/);
+  if(m && (m[1] || m[2])){
+    const mins = (+(m[1]||0))*60 + (+(m[2]||0));
+    const t = assistFind(m[3]);
+    if(!t){ assistSay("No task matches “" + esc(m[3]) + "”.", "warn"); return; }
+    const end = new Date();
+    const start = new Date(end.getTime() - mins*60000);
+    t.sessions.push({task:(m[4]||t.task||"").trim(), start:hhmmss(start), end:hhmmss(end)});
+    save(); render();
+    assistSay("Logged <b>" + mins + "m</b> on <b>" + esc(t.project) + "</b> (" + short(hhmmss(start)) + "–" + short(hhmmss(end)) + ").");
+    return;
+  }
+  // log 10:00-11:30 on X
+  m = low.match(/^log\s+(\d{1,2}:\d{2})\s*(?:-|–|to)\s*(\d{1,2}:\d{2})\s+(?:on\s+|to\s+|for\s+)?(.+?)(?:\s+as\s+(.+))?$/);
+  if(m){
+    const t = assistFind(m[3]);
+    if(!t){ assistSay("No task matches “" + esc(m[3]) + "”.", "warn"); return; }
+    t.sessions.push({task:(m[4]||t.task||"").trim(), start:norm(m[1]), end:norm(m[2])});
+    save(); render();
+    assistSay("Logged <b>" + m[1] + "–" + m[2] + "</b> on <b>" + esc(t.project) + "</b>.");
+    return;
+  }
+
+  // mark X done
+  m = low.match(/^(?:mark|set)\s+(.+?)\s+(?:as\s+)?(done|pending|preview sent|live|paused|cancelled|in progress)$/);
+  if(m){
+    const t = assistFind(m[1]);
+    if(!t){ assistSay("No task matches “" + esc(m[1]) + "”.", "warn"); return; }
+    t.status = ASSIST_STATUS[m[2]];
+    if(t.status === "Done" && t.live){
+      t.sessions.push({task:t.live.task, start:t.live.start, end:hhmmss(new Date())});
+      t.live = null;
+    }
+    save(); render();
+    assistSay("<b>" + esc(t.project) + "</b> → " + esc(t.status) + ".");
+    return;
+  }
+
+  // remind me to X at HH:MM
+  m = low.match(/^remind(?:\s+me)?\s+(?:to\s+)?(.+?)\s+(?:at|@)\s+(\d{1,2}:\d{2})$/);
+  if(m){
+    const time = m[2].length === 4 ? "0" + m[2] : m[2];
+    reminders().push({id:Date.now(), text:q.replace(/^remind(\s+me)?\s+(to\s+)?/i,"").replace(/\s+(at|@)\s+\d{1,2}:\d{2}$/,""),
+      type:"time", time, repeat:"daily", match:"", on:true, lastFired:null});
+    save();
+    assistSay("Reminder set for <b>" + esc(time) + "</b>, every day.");
+    return;
+  }
+
+  // add / create a task
+  m = low.match(/^(?:add|new|create)(?:\s+(?:a\s+)?task)?\s+(.+)$/);
+  if(m){
+    let rest = q.replace(/^(?:add|new|create)(?:\s+(?:a\s+)?task)?\s+/i, "").trim();
+    let brand = "";
+    const first = rest.split(/\s+/)[0].toUpperCase();
+    if(BRANDS.some(b=>b.v && b.v === first)){
+      brand = first;
+      rest = rest.slice(first.length).trim();
+    }
+    if(!rest){ assistSay("What should the task be called?", "warn"); return; }
+    tasks().push(newEntry({brand, project:rest, task:"", status:"In Progress", isDefault:!brand && routineNames().includes(rest.toLowerCase())}));
+    save(); render();
+    assistSay("Added <b>" + esc(rest) + "</b>" + (brand ? " under " + esc(brand) : "") + ". Say “start " + esc(rest.split(/\s+/)[0]) + "” to run it.");
+    return;
+  }
+
+  assistSay("I didn't catch that. Type <b>help</b> to see what I understand.", "warn");
+}
+
+$("asBtn").onclick = ()=>{
+  const p = $("asPanel");
+  const open = p.classList.toggle("show");
+  $("asBtn").classList.toggle("on", open);
+  if(open){
+    if(!$("asLog").children.length) assistSay("Tell me what to log. Type <b>help</b> for examples.");
+    setTimeout(()=>$("asInput").focus(), 40);
+  }
+};
+$("asClose").onclick = ()=>{ $("asPanel").classList.remove("show"); $("asBtn").classList.remove("on"); };
+$("asForm").addEventListener("submit", e=>{
+  e.preventDefault();
+  const v = $("asInput").value;
+  $("asInput").value = "";
+  try{ assistRun(v); }
+  catch(err){ assistSay("That went wrong: " + esc(String(err.message || err)), "warn"); }
+});
 
 /* ---------- boot ---------- */
 const sessName = sessionStorage.getItem("ledger.session");
