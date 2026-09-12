@@ -1569,10 +1569,75 @@ function blockLabels(blocks){
 function buildRows(expandDefaults){
   const list = tasks();
   const liveEnd = hhmmss(new Date());
+  const order = orderedIndices(list);
   const rows=[], meta=[];
-  for(const i of orderedIndices(list)){
+
+  // Which entries export block-by-block with real times. Only those can clash:
+  // a collapsed entry is one total row with no start or end to conflict with.
+  const detail = new Map();
+  for(const i of order){
     const t = list[i];
     t.sessions.sort((a,b)=>(toSec(a.start)??0)-(toSec(b.start)??0));
+    if(exportHours(t, liveEnd) <= 0) continue;
+    const blocks = exportBlocks(t, liveEnd);
+    const collapses = !t.brand || isDefaultEntry(t) || !blocks.length;
+    if(!(collapses && !(expandDefaults && blocks.length))) detail.set(i, blocks);
+  }
+
+  /* Two tasks on the same minutes used to paste as two rows covering the same
+     clock, which made the sheet's Start/End read as a contradiction and the
+     Hours column outrun the day. Blocks that overlap are merged into a single
+     row spanning them, naming every task in it, so the timeline stays a clean
+     sequence and the hours still add up to real time. */
+  const flat = [];
+  detail.forEach((blocks, i)=>blocks.forEach((s,k)=>{
+    const a = toSec(s.start), b = toSec(s.end);
+    if(a != null && b != null && b > a) flat.push({i:i, k:k, a:a, b:b, s:s});
+  }));
+  flat.sort((x,y)=>x.a-y.a || x.b-y.b);
+
+  // a chain of overlaps is one block: A over B and B over C makes one span
+  const groupOf = new Map();          // "entry:block" -> group
+  const groups = [];
+  let cur = null;
+  for(const f of flat){
+    if(cur && f.a < cur.end){ cur.items.push(f); cur.end = Math.max(cur.end, f.b); }
+    else { cur = {items:[f], start:f.a, end:f.b}; groups.push(cur); }
+    if(f.b >= cur.end) cur.tail = f;   // whichever block actually closes the span
+    groupOf.set(f.i + ":" + f.k, cur);
+  }
+  groups.forEach(g=>{
+    if(g.items.length < 2) return;
+    g.shared = true;
+    // the row belongs to whichever entry put the most time into it
+    const by = new Map();
+    g.items.forEach(f=>by.set(f.i, (by.get(f.i)||0) + (f.b-f.a)));
+    let owner = g.items[0].i, best = -1;
+    by.forEach((sec, i)=>{ if(sec > best || (sec === best && order.indexOf(i) < order.indexOf(owner))){ best = sec; owner = i; } });
+    g.owner = owner;
+    g.ownerFirst = g.items.find(f=>f.i === owner).k;
+
+    const idxs = [...new Set(g.items.map(f=>f.i))].sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+    const nameOf = j => list[j].project || brandLabel(list[j].brand);
+    g.brand   = [...new Set(idxs.map(j=>brandLabel(list[j].brand)))].join(" + ");
+    g.project = [...new Set(idxs.map(nameOf))].join(" + ");
+    // qualify each label with its project only when the merge spans more than one
+    const multi = new Set(idxs.map(nameOf)).size > 1;
+    const seen = [];
+    g.items.forEach(f=>{
+      const lbl = (f.s.task||"").trim();
+      const txt = multi ? (lbl ? nameOf(f.i) + ": " + lbl : nameOf(f.i)) : lbl;
+      if(txt && !seen.includes(txt)) seen.push(txt);
+    });
+    g.task = seen.join(" + ");
+    g.status = list[owner].status;
+    g.startStr = g.items[0].s.start;
+    g.endStr = (g.tail || g.items[g.items.length-1]).s.end;
+  });
+
+  const done = new Set();
+  for(const i of order){
+    const t = list[i];
     const total = exportHours(t, liveEnd);
     if(total<=0) continue; // skip zero-hour entries
     const blocks = exportBlocks(t, liveEnd);
@@ -1584,14 +1649,29 @@ function buildRows(expandDefaults){
       rows.push([brandName, t.project, desc, "", "", fmtH(total), t.status]);
       meta.push({detail:false});
     } else {
+      // has a plain row of this entry already printed its brand/project?
+      let ownHeader = false;
       blocks.forEach((s,k)=>{
+        const g = groupOf.get(i + ":" + k);
+        if(g && g.shared){
+          if(g.owner !== i || done.has(g)) return;   // absorbed into someone else's row
+          done.add(g);
+          rows.push([g.brand, g.project, g.task, g.startStr, g.endStr,
+                     fmtH(hours(g.startStr, g.endStr)), g.status]);
+          meta.push({detail:collapses, shared:true});
+          // the merged row's brand column names several clients, so the next plain
+          // row of this entry has to introduce itself again rather than inherit it
+          ownHeader = false;
+          return;
+        }
         rows.push([
-          k===0 ? brandName : "", k===0 ? t.project : "",
-          s.task || (k===0 ? t.task : ""),
+          ownHeader ? "" : brandName, ownHeader ? "" : t.project,
+          s.task || (ownHeader ? "" : t.task),
           s.start, s.end, fmtH(hours(s.start,s.end)),
-          k===0 ? t.status : ""
+          ownHeader ? "" : t.status
         ]);
         meta.push({detail:collapses});
+        ownHeader = true;
       });
     }
   }
@@ -1854,7 +1934,7 @@ function renderPreview(){
   $("prevTable").innerHTML =
     "<tr>"+head.map(h=>`<th>${h}</th>`).join("")+"</tr>" +
     (rows.length
-      ? rows.map((r,k)=>`<tr class="${meta[k].detail?"detailrow":""}">`+r.map(c=>`<td>${esc(c)||""}</td>`).join("")+"</tr>").join("")
+      ? rows.map((r,k)=>`<tr class="${meta[k].detail?"detailrow":""} ${meta[k].shared?"sharedrow":""}">`+r.map(c=>`<td>${esc(c)||""}</td>`).join("")+"</tr>").join("")
       : `<tr><td colspan="7" style="color:var(--ink-soft)">Nothing to export yet — no logged time.</td></tr>`);
   $("prevMeta").innerHTML = rows.length
     ? `${rows.length} row${rows.length>1?"s":""} · ${fmtH(total)} h` +

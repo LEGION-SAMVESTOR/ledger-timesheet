@@ -685,6 +685,9 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
 .prevtable td,.prevtable th{padding:6px 10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);white-space:nowrap;text-align:left}
 .prevtable th{background:var(--panel-2);font-size:9.5px;text-transform:uppercase;letter-spacing:.15em;color:var(--ink-soft);font-family:"Chakra Petch",sans-serif}
 .prevtable td:last-child,.prevtable th:last-child{border-right:none}
+/* rows where overlapping blocks were folded into one */
+.prevtable tr.sharedrow td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+.prevtable tr.sharedrow td{background:color-mix(in srgb, var(--amber) 7%, transparent)}
 
 .btn.danger{border-color:var(--red);color:var(--red)}
 .btn.danger:hover{background:var(--red-bg);color:var(--red)}
