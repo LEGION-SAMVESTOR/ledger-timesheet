@@ -5,7 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LEDGER // Daily Ops</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Fredoka:wght@400;500;600;700&family=Luckiest+Guy&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Only the two faces every look needs. Fraunces (serif body) and the cartoon pair
+     are fetched by loadFont() the moment a setting actually asks for them, which
+     keeps three families — Fraunces is a wide variable font — off the default load. -->
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script>
 /* Apply saved look before first paint so the boot screen never flashes the defaults.
@@ -26,6 +30,17 @@
     d.dataset.ascon  = s.asConsole ? "on" : "off";
     d.dataset.bgpat  = s.bgpat  || "grid";
     d.dataset.hl     = s.highlight === false ? "off" : "on";
+    window.loadFont = function(key){
+      var fam = {serif:"Fraunces:opsz,wght@9..144,400;9..144,600",
+                 toon:"Fredoka:wght@400;500;600;700&family=Luckiest+Guy"}[key];
+      if(!fam || document.getElementById("fnt-" + key)) return;
+      var l = document.createElement("link");
+      l.id = "fnt-" + key; l.rel = "stylesheet";
+      l.href = "https://fonts.googleapis.com/css2?family=" + fam + "&display=swap";
+      document.head.appendChild(l);
+    };
+    if(d.dataset.font  === "serif") window.loadFont("serif");
+    if(d.dataset.style === "toon")  window.loadFont("toon");
     if(s.theme === "custom" && s.palette){
       var p = s.palette, st = d.style;
       var hx = function(h){ h=(h||"").replace("#",""); if(h.length===3) h=h.split("").map(function(c){return c+c}).join("");
@@ -138,6 +153,7 @@
 
     <div class="foot">
       <span class="total"><span id="dayTotal">0.00</span> <span class="u">HRS</span></span>
+      <span class="dupchip" id="dayDup" hidden></span>
       <div class="tgwrap">
         <div class="tglabel"><span id="tgPct">0%</span> of <span id="tgGoal">8</span>h target</div>
         <div class="tgbar"><span id="tgFill"></span></div>
@@ -589,6 +605,7 @@
     <div class="gchart" id="gapsChart"></div>
     <div class="glegend" id="gapsLegend"></div>
     <div class="prevwrap" style="margin-top:12px"><table class="prevtable" id="gapsTable"></table></div>
+    <div class="prevwrap" id="overlapWrap" style="margin-top:12px;display:none"><table class="prevtable" id="overlapTable"></table></div>
     <div class="mbtns" style="margin-top:14px">
       <button type="button" class="btn pri small" id="gapsClose">Done</button>
     </div>

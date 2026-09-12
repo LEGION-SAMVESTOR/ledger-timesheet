@@ -169,6 +169,10 @@ const IMGFX = (function(){
     cv.width = W*DPR; cv.height = H*DPR;
     ctx.setTransform(DPR,0,0,DPR,0,0);
   }
+  // a drag-resize fires this dozens of times a second; reallocating the backing
+  // store that often is what makes the window feel like treacle
+  let rzT = 0;
+  const onResize = ()=>{ clearTimeout(rzT); rzT = setTimeout(resize, 120); };
   const onMove = e=>{ M.px=M.x; M.py=M.y; M.x=e.clientX; M.y=e.clientY; M.dx=M.x-M.px; M.dy=M.y-M.py; };
   const onDown = ()=>M.down=true;
   const onUp   = ()=>M.down=false;
@@ -178,7 +182,9 @@ const IMGFX = (function(){
     token++;
     if(raf) cancelAnimationFrame(raf);
     raf = 0;
-    removeEventListener("resize", resize);
+    clearTimeout(rzT);
+    removeEventListener("resize", onResize);
+    removeEventListener("visibilitychange", onVis);
     removeEventListener("mousemove", onMove);
     removeEventListener("mousedown", onDown);
     removeEventListener("mouseup", onUp);
@@ -205,14 +211,15 @@ const IMGFX = (function(){
   }
 
   function run(layer){
-    DPR = Math.min(devicePixelRatio||1, 2);
+    // 2× on a hidpi screen quadruples the fill cost for decoration nobody inspects
+    DPR = Math.min(devicePixelRatio||1, 1.5);
     cv = document.createElement("canvas");
     cv.id = "imgfxCanvas";
     cv.style.zIndex = layer==="front" ? "40" : "0";
     document.body.prepend(cv);
     ctx = cv.getContext("2d");
     resize();
-    addEventListener("resize", resize);
+    addEventListener("resize", onResize);
     addEventListener("mousemove", onMove, {passive:true});
     addEventListener("mousedown", onDown);
     addEventListener("mouseup", onUp);
@@ -229,6 +236,7 @@ const IMGFX = (function(){
       };
     });
 
+    addEventListener("visibilitychange", onVis);
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
     if(still){ draw(); return; }   // park them rather than animate
     tick();
@@ -245,6 +253,13 @@ const IMGFX = (function(){
       ctx.restore();
     }
   }
+
+  // a background tab still gets rAF in some builds, and always keeps the layer alive
+  const onVis = ()=>{
+    if(!parts.length) return;
+    if(document.hidden){ if(raf){ cancelAnimationFrame(raf); raf = 0; } }
+    else if(!raf && !matchMedia("(prefers-reduced-motion: reduce)").matches) tick();
+  };
 
   function tick(){
     const swipe = Math.min(Math.hypot(M.dx,M.dy)/14, 3);
@@ -366,6 +381,10 @@ function applySettings(){
   de.dataset.toon = settings.toon;
   de.dataset.accent = settings.accent;
   de.dataset.font = settings.font;
+  if(window.loadFont){
+    if(settings.font === "serif") loadFont("serif");
+    if(settings.style === "toon") loadFont("toon");
+  }
   de.dataset.fsize = settings.fsize;
   de.dataset.density = settings.density;
   de.dataset.hl = settings.highlight ? "on" : "off";
@@ -580,16 +599,26 @@ function buildStarfield(){
   layers.forEach(L=>{
     const el = field.querySelector(L.el);
     if(!el) return;
-    let img = [];
-    const fixedR = ((L.r[0]+L.r[1])/2).toFixed(2);
+    // Each layer used to be ~60 stacked radial-gradients tiled across the viewport,
+    // and the browser re-composited every one of them on each drift frame. Drawing
+    // the same stars once into a canvas gives a single cached tile instead — same
+    // picture, one texture to slide around.
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = L.tile;
+    const g = cv.getContext("2d");
+    const fixedR = (L.r[0]+L.r[1])/2;
     for(let i=0;i<L.n;i++){
-      const r = c.sizes === false ? fixedR : rnd(L.r[0], L.r[1]).toFixed(2);
-      const x = Math.round(rnd(0, L.tile)), y = Math.round(rnd(0, L.tile));
-      const a = Math.min(1, rnd(L.a[0], L.a[1]) * bright).toFixed(2);
+      const r = c.sizes === false ? fixedR : rnd(L.r[0], L.r[1]);
+      const x = rnd(0, L.tile), y = rnd(0, L.tile);
+      const a = Math.min(1, rnd(L.a[0], L.a[1]) * bright);
       const tint = Math.random() < .18 ? "255,240,214" : (Math.random() < .3 ? "214,238,255" : "255,255,255");
-      img.push(`radial-gradient(${r}px ${r}px at ${x}px ${y}px, rgba(${tint},${a}), transparent)`);
+      const grd = g.createRadialGradient(x, y, 0, x, y, r);
+      grd.addColorStop(0, "rgba(" + tint + "," + a.toFixed(3) + ")");
+      grd.addColorStop(1, "rgba(" + tint + ",0)");
+      g.fillStyle = grd;
+      g.fillRect(x-r, y-r, r*2, r*2);
     }
-    el.style.backgroundImage = img.join(",");
+    el.style.backgroundImage = "url(" + cv.toDataURL("image/png") + ")";
     el.style.backgroundSize = L.tile + "px " + L.tile + "px";
     field.style.setProperty("--sd" + L.v, (L.drift * 100 / (c.drift||100)).toFixed(0) + "s");
     field.style.setProperty("--tw" + L.v, (L.tw * 100 / (c.twinkle||100)).toFixed(2) + "s");
@@ -1303,6 +1332,18 @@ function renderTable(){
   }
   const total = dayTotal;
   $("dayTotal").textContent = fmtH(total);
+  // the total sums every block, so flag when some of those minutes are the same minutes
+  const dSpans = blockSpans(list);
+  const dDup = Math.max(0, spanLogged(dSpans) - spanUnion(dSpans));
+  const dupEl = $("dayDup");
+  if(dupEl){
+    dupEl.hidden = dDup < 60;
+    if(dDup >= 60){
+      dupEl.textContent = "⚠ " + fmtMin(dDup/60) + " double-counted";
+      dupEl.title = "Some blocks share the same minutes, so the total above counts them twice.\n" +
+                    "The day actually spans " + fmtH(spanUnion(dSpans)/3600) + " h of clock. Open Gaps to see which.";
+    }
+  }
   $("statHours").textContent = fmtH(total);
   $("statTasks").textContent = list.length;
   renderBrandStrip(list, total);
@@ -1570,6 +1611,61 @@ function copyRows(){
 }
 $("copyBtn").onclick = copyRows;
 
+
+/* ---------- blocks that share a minute ----------
+   Two timers can legitimately run at once (the "run both" window), and the gaps
+   audit used to hide that: the bar stacked them into lanes but every number was
+   a plain sum, so a 9-hour day could read as 11 hours logged with no explanation.
+   These three keep the two figures apart — what was logged, and what the clock
+   actually covered — so the timeline stops looking wrong. */
+function blockSpans(list){
+  const now = hhmmss(new Date());
+  const out = [];
+  list.forEach((t,i)=>{
+    t.sessions.forEach((s,si)=>{
+      const a = toSec(s.start), b = toSec(s.end);
+      if(a != null && b > a) out.push({a:a, b:b, ti:i, si:si, live:false, lbl:s.task});
+    });
+    if(t.live){
+      const a = toSec(t.live.start), b = toSec(now);
+      if(a != null && b > a) out.push({a:a, b:b, ti:i, si:-1, live:true, lbl:t.live.task});
+    }
+  });
+  return out;
+}
+// wall-clock seconds actually covered, counting a shared minute once
+function spanUnion(spans){
+  if(!spans.length) return 0;
+  const iv = spans.map(s=>[s.a,s.b]).sort((x,y)=>x[0]-y[0]);
+  let total = 0, ca = iv[0][0], cb = iv[0][1];
+  for(let i=1;i<iv.length;i++){
+    if(iv[i][0] <= cb) cb = Math.max(cb, iv[i][1]);
+    else { total += cb-ca; ca = iv[i][0]; cb = iv[i][1]; }
+  }
+  return total + (cb-ca);
+}
+// contiguous stretches where two or more blocks are open together
+function overlapRanges(spans){
+  const ev = [];
+  spans.forEach((s,k)=>{ ev.push([s.a,1,k]); ev.push([s.b,-1,k]); });
+  // an end sorts before a start at the same second, so touching blocks don't count
+  ev.sort((x,y)=> x[0]-y[0] || x[1]-y[1]);
+  const open = new Set(), out = [];
+  let prev = null;
+  for(const e of ev){
+    const t = e[0];
+    if(prev != null && t > prev && open.size > 1){
+      const last = out[out.length-1];
+      if(last && last.b === prev){ last.b = t; open.forEach(m=>last.who.add(m)); }
+      else out.push({a:prev, b:t, who:new Set(open)});
+    }
+    if(e[1] === 1) open.add(e[2]); else open.delete(e[2]);
+    prev = t;
+  }
+  return out.filter(r=>r.b-r.a >= 60);   // sub-minute touches are noise
+}
+const spanLogged = spans => spans.reduce((s,x)=>s+(x.b-x.a), 0);
+
 /* ---------- time gaps ---------- */
 const fmtMin = m => m>=60 ? `${Math.floor(m/60)}h ${Math.round(m%60)}m` : `${Math.round(m)}m`;
 // distinct lane colours — red is reserved for gaps
@@ -1586,6 +1682,7 @@ $("gapsBtn").onclick = ()=>{
   if(!iv.length){
     $("gapsSummary").innerHTML = "No timeblocks logged this day yet — nothing to audit.";
     $("gapsChart").innerHTML = ""; $("gapsTable").innerHTML = "";
+    $("overlapWrap").style.display = "none";
     $("gapsOverlay").classList.add("show");
     return;
   }
@@ -1611,10 +1708,20 @@ $("gapsBtn").onclick = ()=>{
   const realGaps = gaps.filter(([a,b])=>b-a >= 60); // ignore sub-minute noise
   const gapSec = realGaps.reduce((x,[a,b])=>x+(b-a),0);
   const covPct = Math.round((span-gapSec)/span*100);
+  // two timers on one minute make the logged total outrun the clock — say so
+  const spans   = blockSpans(list);
+  const overlaps = overlapRanges(spans);
+  const loggedSec = spanLogged(spans);
+  const elapsedSec = spanUnion(spans);
+  const dupSec = Math.max(0, loggedSec - elapsedSec);
   $("gapsSummary").innerHTML =
     `Window <b>${secToHM(dayStart)} → ${secToHM(dayEnd)}</b> (${fmtMin(span/60)}) · ` +
     `coverage <span class="cov-pct">${covPct}%</span> · ` +
-    (realGaps.length ? `<span class="gap-dur">${realGaps.length} gap${realGaps.length>1?"s":""} · ${fmtMin(gapSec/60)} untracked</span>` : `<span class="cov-pct">no gaps — fully tracked ✓</span>`);
+    (realGaps.length ? `<span class="gap-dur">${realGaps.length} gap${realGaps.length>1?"s":""} · ${fmtMin(gapSec/60)} untracked</span>` : `<span class="cov-pct">no gaps — fully tracked ✓</span>`) +
+    (dupSec >= 60
+      ? `<br><b>${fmtMin(loggedSec/60)}</b> logged across <b>${fmtMin(elapsedSec/60)}</b> of clock — ` +
+        `<span class="ov-dur">${fmtMin(dupSec/60)} counted twice</span> in ${overlaps.length} overlap${overlaps.length>1?"s":""}`
+      : "");
   // ---- single-track gantt: every block on one bar, one colour per task ----
   const pos = s => (s-dayStart)/span*100;
   const liveNow = hhmmss(new Date());
@@ -1656,8 +1763,18 @@ Click to edit this block`;
   }).join("");
   const gapHtml = realGaps.map(([a,b])=>
     `<div class="gblk gapblk" title="${esc(`Untracked gap\n${secToHM(a)} – ${secToHM(b)} · ${fmtMin((b-a)/60)}`)}" style="left:${pos(a)}%;width:${Math.max(0.35,(b-a)/span*100)}%;top:3px;bottom:3px"><span class="gtxt">${(b-a)>=1200?fmtMin((b-a)/60):""}</span></div>`).join("");
+  // a thin rail under the bar marks the stretches claimed by more than one task
+  const ovWho = r => [...new Set([...r.who]
+    .map(k=>spans[k] && list[spans[k].ti])
+    .filter(Boolean)
+    .map(t=>t.project || brandLabel(t.brand) || "Task"))];
+  const ovHtml = overlaps.map(r=>{
+    const tip = `${ovWho(r).join(" + ")}\n${secToHM(r.a)} – ${secToHM(r.b)} · ${fmtMin((r.b-r.a)/60)} on two tasks at once`;
+    return `<i title="${esc(tip)}" style="left:${pos(r.a)}%;width:${Math.max(0.35,(r.b-r.a)/span*100)}%"></i>`;
+  }).join("");
   $("gapsChart").innerHTML =
-    `<div class="gtrack">${ticks}${gapHtml}${blkHtml}</div>` +
+    `<div class="gtrack" style="--lanes:${lanes}">${ticks}${gapHtml}${blkHtml}</div>` +
+    (overlaps.length ? `<div class="govrow">${ovHtml}</div>` : "") +
     `<div class="gaxisrow">${axis}</div>`;
   // clicking a block on the chart edits (or renames, if running) that timeblock
   $("gapsChart").querySelectorAll("[data-gedit]").forEach(el=>el.onclick=()=>{
@@ -1668,7 +1785,18 @@ Click to edit this block`;
   });
   $("gapsLegend").innerHTML = legend.map(l=>
     `<span class="lgitem"><span class="gdot" style="background:${l.col}"></span><b>${esc(l.project)}</b> ${fmtMin(l.mins)}</span>`).join("") +
-    (realGaps.length?`<span class="lgitem"><span class="gdot" style="background:repeating-linear-gradient(-45deg,var(--red) 0 3px,transparent 3px 6px);box-shadow:inset 0 0 0 1px var(--red)"></span><b>Gaps</b> ${fmtMin(gapSec/60)}</span>`:"");
+    (realGaps.length?`<span class="lgitem"><span class="gdot" style="background:repeating-linear-gradient(-45deg,var(--red) 0 3px,transparent 3px 6px);box-shadow:inset 0 0 0 1px var(--red)"></span><b>Gaps</b> ${fmtMin(gapSec/60)}</span>`:"") +
+    (overlaps.length?`<span class="lgitem"><span class="gdot" style="background:repeating-linear-gradient(-45deg,var(--amber) 0 3px,transparent 3px 6px);box-shadow:inset 0 0 0 1px var(--amber)"></span><b>Overlap</b> ${fmtMin(dupSec/60)}</span>`:"");
+  // and the same stretches listed out, so they can be corrected one by one
+  $("overlapWrap").style.display = overlaps.length ? "" : "none";
+  if(overlaps.length){
+    $("overlapTable").innerHTML = "<tr><th>#</th><th>From</th><th>To</th><th>Length</th><th>Tasks sharing it</th></tr>" +
+      overlaps.map((r,k)=>{
+        const who = ovWho(r);
+        return "<tr><td>" + (k+1) + "</td><td>" + secToHM(r.a) + "</td><td>" + secToHM(r.b) +
+          "</td><td class=\"ov-dur\">" + fmtMin((r.b-r.a)/60) + "</td><td>" + esc(who.join(" + ")) + "</td></tr>";
+      }).join("");
+  }
   // gap list
   const canAssign = viewDay===todayKey();
   $("gapsTable").innerHTML = `<tr><th>#</th><th>From</th><th>To</th><th>Length</th>${canAssign?"<th></th>":""}</tr>` +

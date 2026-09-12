@@ -568,7 +568,8 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
 /* ---------- time gaps / single-track gantt ---------- */
 .gchart{padding-top:2px}
 .gtrack{
-  position:relative;height:46px;background:var(--panel-2);border-radius:8px;
+  position:relative;height:max(46px, calc(var(--lanes,1) * 26px + 8px));
+  background:var(--panel-2);border-radius:8px;
   box-shadow:inset 0 0 0 1px var(--line-strong);overflow:hidden;
 }
 .gtrack .tick{position:absolute;top:0;bottom:0;width:1px;background:var(--line);opacity:.55}
@@ -584,6 +585,21 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
 .gblk.gapblk{
   background:repeating-linear-gradient(-45deg, rgba(255,92,105,.40) 0 7px, rgba(255,92,105,.10) 7px 14px);
   box-shadow:inset 0 0 0 1px var(--red);color:var(--red);
+}
+/* stretches where two tasks claimed the same minutes */
+.govrow{position:relative;height:6px;margin-top:4px}
+.govrow i{
+  position:absolute;top:0;height:6px;border-radius:3px;min-width:2px;
+  background:repeating-linear-gradient(-45deg, var(--amber) 0 4px, color-mix(in srgb, var(--amber) 22%, transparent) 4px 8px);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--amber) 55%, transparent);
+}
+.ov-dur{color:var(--amber);font-weight:600}
+.dupchip{
+  display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;letter-spacing:.04em;
+  padding:3px 9px;border-radius:7px;cursor:help;white-space:nowrap;
+  font-family:"Chakra Petch",sans-serif;
+  color:var(--amber);background:var(--amber-bg);
+  border:1px solid color-mix(in srgb, var(--amber) 35%, transparent);
 }
 .gaxisrow{position:relative;height:14px;margin-top:5px}
 .gaxisrow .atick{position:absolute;top:0;font-size:9.5px;color:var(--ink-soft);transform:translateX(-50%);font-variant-numeric:tabular-nums}
@@ -725,7 +741,7 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
 /* ============================================================
    ANIMATED BACKGROUNDS
    ============================================================ */
-.bgfx{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.bgfx{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;contain:layout paint}
 .bgfx span{position:absolute;display:block;opacity:0}
 [data-bgfx="off"] .bgfx{display:none}
 
@@ -740,9 +756,15 @@ select.status-sel{width:100%}   /* table dropdowns only — the read-only chips 
 [data-bgfx="aurora"] .bgfx span:nth-child(2){top:18%;right:-20%;left:auto;filter:blur(70px) hue-rotate(85deg);animation:drift2 32s ease-in-out infinite alternate}
 [data-bgfx="aurora"] .bgfx span:nth-child(3){bottom:-28%;left:12%;top:auto;filter:blur(70px) hue-rotate(-70deg);animation:drift3 29s ease-in-out infinite alternate}
 [data-bgfx="aurora"] .bgfx span:nth-child(4){bottom:-10%;right:6%;top:auto;left:auto;filter:blur(80px) hue-rotate(160deg);opacity:.20;animation:drift1 36s ease-in-out infinite alternate-reverse}
-@keyframes drift1{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(16vw,10vh,0) scale(1.25)}}
-@keyframes drift2{from{transform:translate3d(0,0,0) scale(1.1)}to{transform:translate3d(-18vw,14vh,0) scale(.9)}}
-@keyframes drift3{from{transform:translate3d(0,0,0) scale(.95)}to{transform:translate3d(20vw,-12vh,0) scale(1.2)}}
+/* translate only, deliberately. A scale() on a blur(70px) layer this big forces the
+   browser to re-blur it every single frame; sliding a pre-blurred texture is free.
+   The clouds are sized apart instead, so the drift still reads as depth. */
+[data-bgfx="aurora"] .bgfx span:nth-child(2){width:72vw;height:72vw}
+[data-bgfx="aurora"] .bgfx span:nth-child(3){width:52vw;height:52vw}
+[data-bgfx="aurora"] .bgfx span:nth-child(4){width:66vw;height:66vw}
+@keyframes drift1{from{transform:translate3d(0,0,0)}to{transform:translate3d(16vw,10vh,0)}}
+@keyframes drift2{from{transform:translate3d(0,0,0)}to{transform:translate3d(-18vw,14vh,0)}}
+@keyframes drift3{from{transform:translate3d(0,0,0)}to{transform:translate3d(20vw,-12vh,0)}}
 
 /* BEAMS — slow rotating light sweep + horizon glow */
 [data-bgfx="beams"] .bgfx span:nth-child(1){
@@ -1637,15 +1659,34 @@ body.booting .login-wrap,body.booting .app{visibility:hidden}
 /* ============================================================
    SCROLLBARS — themed everywhere, page included
    ============================================================ */
-*{scrollbar-width:thin;scrollbar-color:var(--cyan) transparent}
+/* Firefox has no ::-webkit-scrollbar, so it gets the standard properties — and
+   only it. In Chrome, scrollbar-width/scrollbar-color take over from the custom
+   rail and drag the stepper arrows back in with them, which is what put an arrow
+   at each end no matter what ::-webkit-scrollbar-button said. */
+@supports not selector(::-webkit-scrollbar){
+  *{scrollbar-width:thin;scrollbar-color:var(--cyan) transparent}
+}
 ::-webkit-scrollbar{width:12px;height:12px}
+/* no stepper arrows at either end — the rail is a track and a thumb, nothing else.
+   Every corner is listed because Chrome draws increment/decrement caps separately. */
+::-webkit-scrollbar-button,
+::-webkit-scrollbar-button:single-button,
+::-webkit-scrollbar-button:double-button,
+::-webkit-scrollbar-button:start:decrement,
+::-webkit-scrollbar-button:end:increment,
+::-webkit-scrollbar-button:start:increment,
+::-webkit-scrollbar-button:end:decrement,
+::-webkit-scrollbar-button:horizontal,
+::-webkit-scrollbar-button:vertical{
+  display:none !important;width:0 !important;height:0 !important;background:none !important;
+}
 ::-webkit-scrollbar-track{
   background:color-mix(in srgb, var(--ink) 6%, transparent);
-  border-radius:99px;
+  border-radius:0;
 }
 ::-webkit-scrollbar-thumb{
-  border-radius:99px;border:3px solid transparent;background-clip:content-box;
-  background-color:color-mix(in srgb, var(--cyan) 55%, transparent);
+  border-radius:0;border:3px solid transparent;background-clip:content-box;
+  background-color:color-mix(in srgb, var(--cyan) 72%, transparent);
   transition:background-color .18s;
 }
 ::-webkit-scrollbar-thumb:hover{background-color:var(--cyan)}
@@ -1654,7 +1695,7 @@ body.booting .login-wrap,body.booting .app{visibility:hidden}
 html::-webkit-scrollbar{width:14px}
 html::-webkit-scrollbar-track{background:color-mix(in srgb, var(--ink) 4%, transparent)}
 html::-webkit-scrollbar-thumb{
-  background-color:color-mix(in srgb, var(--cyan) 62%, transparent);
+  background-color:color-mix(in srgb, var(--cyan) 82%, transparent);
   box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--cyan) 40%, transparent);
 }
 html::-webkit-scrollbar-thumb:hover{background-color:var(--cyan);box-shadow:0 0 14px -2px var(--cyan)}
@@ -1671,6 +1712,7 @@ html::-webkit-scrollbar-thumb:hover{background-color:var(--cyan);box-shadow:0 0 
   border-radius:0;border-width:2px;background-color:var(--cyan);
   box-shadow:inset 0 0 0 2px var(--ink-strong)}
 [data-style="toon"] ::-webkit-scrollbar{width:14px}
+/* the cartoon look is the one place a rounded rail belongs */
 [data-style="toon"] ::-webkit-scrollbar-track{background:var(--panel-2);border-radius:99px;box-shadow:inset 0 0 0 2px var(--toon-out)}
 [data-style="toon"] ::-webkit-scrollbar-thumb{
   border-radius:99px;border-width:2px;background-color:var(--cyan);
